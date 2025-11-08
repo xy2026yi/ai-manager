@@ -127,6 +127,10 @@ const loadDashboardData = async () => {
               <el-icon><DocumentAdd /></el-icon>
               管理MCP模板
             </el-button>
+            <el-button size="large" @click="$router.push('/config-manager')">
+              <el-icon><Setting /></el-icon>
+              配置管理
+            </el-button>
             <el-button size="large" @click="$router.push('/mode-manager')">
               <el-icon><Refresh /></el-icon>
               切换模式

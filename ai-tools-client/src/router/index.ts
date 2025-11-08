@@ -32,6 +32,14 @@ const router = createRouter({
       },
     },
     {
+      path: '/config-manager',
+      name: 'config-manager',
+      component: () => import('../views/ConfigManager.vue'),
+      meta: {
+        title: '配置管理',
+      },
+    },
+    {
       path: '/mode-manager',
       name: 'mode-manager',
       component: () => import('../views/ModeManager.vue'),
