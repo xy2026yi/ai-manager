@@ -2,7 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 // Tauri imports
-use tauri::{State, Config};
+use tauri::State;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use std::path::PathBuf;
@@ -80,9 +80,12 @@ async fn main() {
             delete_config_history,
 
             // Work mode commands
-            get_work_mode_config,
-            get_all_work_mode_configs,
-            update_work_mode_config,
+            get_work_mode_by_name,
+            list_work_mode_configs,
+            update_work_mode_by_id,
+            switch_work_mode,
+            get_work_mode_status,
+            rollback_work_mode,
 
             // App state commands
             get_app_state,
