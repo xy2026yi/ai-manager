@@ -2,6 +2,33 @@ use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 use sqlx::{FromRow, SqlitePool};
 
+// 健康状态枚举
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum HealthStatus {
+    Healthy,
+    Degraded,
+    Unhealthy,
+}
+
+// 故障转移触发条件类型枚举
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ConditionType {
+    ConsecutiveFailures,
+    ResponseTime,
+    SuccessRate,
+}
+
+// 供应商切换原因枚举
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SwitchReason {
+    Manual,
+    AutoFailover,
+    HealthCheck,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Supplier {
     pub id: Option<i64>,
@@ -73,7 +100,7 @@ pub struct SupplierHealth {
     pub uptime_percentage: f64,
     pub total_requests: i64,
     pub failed_requests: i64,
-    pub status: 'healthy' | 'degraded' | 'unhealthy',
+    pub status: HealthStatus,
     pub error_message: Option<String>,
 }
 
@@ -106,7 +133,7 @@ pub struct FailoverConfig {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FailoverTrigger {
-    pub condition_type: 'consecutive_failures' | 'response_time' | 'success_rate',
+    pub condition_type: ConditionType,
     pub threshold: f64,
     pub evaluation_window_minutes: u32,
 }
@@ -115,7 +142,7 @@ pub struct FailoverTrigger {
 pub struct SupplierSwitchRequest {
     pub from_supplier_id: i64,
     pub to_supplier_id: i64,
-    pub switch_reason: 'manual' | 'auto_failover' | 'health_check',
+    pub switch_reason: SwitchReason,
     pub create_backup: bool,
     pub rollback_on_failure: bool,
 }

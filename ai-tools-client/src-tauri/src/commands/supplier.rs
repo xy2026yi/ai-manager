@@ -58,6 +58,14 @@ pub async fn create_supplier(
         haiku_model: request.haiku_model.clone(),
         is_active: Some(0),
         sort_order: Some(0),
+        // 健康检查字段（初始值）
+        is_healthy: None,
+        last_check_time: None,
+        response_time: None,
+        consecutive_failures: None,
+        uptime_percentage: None,
+        total_requests: None,
+        failed_requests: None,
         created_at: None,
         updated_at: None,
     };
@@ -181,6 +189,14 @@ pub async fn validate_supplier_config(
         haiku_model: request.haiku_model.clone(),
         is_active: Some(0),
         sort_order: Some(0),
+        // 健康检查字段（初始值）
+        is_healthy: None,
+        last_check_time: None,
+        response_time: None,
+        consecutive_failures: None,
+        uptime_percentage: None,
+        total_requests: None,
+        failed_requests: None,
         created_at: None,
         updated_at: None,
     };
@@ -253,6 +269,14 @@ pub async fn import_suppliers(
             haiku_model: request.haiku_model.clone(),
             is_active: Some(0),
             sort_order: Some(index as i64),
+            // 健康检查字段（初始值）
+            is_healthy: None,
+            last_check_time: None,
+            response_time: None,
+            consecutive_failures: None,
+            uptime_percentage: None,
+            total_requests: None,
+            failed_requests: None,
             created_at: None,
             updated_at: None,
         };
@@ -316,7 +340,13 @@ pub async fn check_supplier_health(
             1 // 简化实现
         };
 
-        let status = if is_healthy { "healthy" } else if consecutive_failures < 3 { "degraded" } else { "unhealthy" };
+        let status = if is_healthy {
+            crate::models::supplier::HealthStatus::Healthy
+        } else if consecutive_failures < 3 {
+            crate::models::supplier::HealthStatus::Degraded
+        } else {
+            crate::models::supplier::HealthStatus::Unhealthy
+        };
 
         let health = SupplierHealth {
             supplier_id,
@@ -327,7 +357,7 @@ pub async fn check_supplier_health(
             uptime_percentage: if is_healthy { 100.0 } else { 0.0 }, // 简化计算
             total_requests: 1,
             failed_requests: if is_healthy { 0 } else { 1 },
-            status: status.into(),
+            status,
             error_message: connection_result.error,
         };
 
@@ -495,8 +525,7 @@ pub async fn auto_failover(
                     let switch_request = SupplierSwitchRequest {
                         from_supplier_id: current_supplier.id.unwrap(),
                         to_supplier_id: best_supplier.id.unwrap(),
-                        switch_reason: format!("auto_failover: 智能故障转移，响应时间: {}ms, 成功率: {:.1}%",
-                                              health.response_time, health.uptime_percentage),
+                        switch_reason: crate::models::supplier::SwitchReason::AutoFailover,
                         create_backup: true,
                         rollback_on_failure: config.auto_rollback,
                     };
@@ -519,12 +548,12 @@ pub async fn auto_failover(
 // 评估故障转移条件
 fn evaluate_failover_conditions(health: &SupplierHealth, config: &FailoverConfig) -> bool {
     // 条件1: 连续失败次数超过阈值
-    if health.consecutive_failures >= config.max_consecutive_failures {
+    if health.consecutive_failures >= config.max_consecutive_failures as i64 {
         return true;
     }
 
     // 条件2: 响应时间超过阈值且成功率低
-    if health.response_time > config.max_response_time_ms && health.uptime_percentage < config.min_success_rate {
+    if health.response_time > config.max_response_time_ms as i64 && health.uptime_percentage < config.min_success_rate {
         return true;
     }
 
