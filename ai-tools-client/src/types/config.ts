@@ -319,3 +319,73 @@ export interface ConfigEvent {
 export interface ConfigEventListener {
   (event: ConfigEvent): void
 }
+
+// 工作模式配置
+export interface WorkModeConfig {
+  id?: number
+  modeName: string
+  activeClaudeSupplierId?: number
+  activeCodexSupplierId?: number
+  mcpTemplateIds?: number[]
+  createdAt?: string
+  updatedAt?: string
+}
+
+// 工作模式创建请求
+export interface CreateWorkModeRequest {
+  modeName: string
+  activeClaudeSupplierId?: number
+  activeCodexSupplierId?: number
+  mcpTemplateIds?: number[]
+}
+
+// 工作模式更新请求
+export interface UpdateWorkModeRequest {
+  id: number
+  modeName?: string
+  activeClaudeSupplierId?: number
+  activeCodexSupplierId?: number
+  mcpTemplateIds?: number[]
+}
+
+// 工作模式切换请求
+export interface WorkModeSwitchRequest {
+  targetMode: string
+  claudeSupplierId?: number
+  codexSupplierId?: number
+  mcpTemplateIds?: number[]
+  createBackup: boolean
+}
+
+// 工作模式状态
+export interface WorkModeStatus {
+  currentMode: string
+  isTransitioning: boolean
+  lastSwitchTime?: string
+  activeClaudeSupplier?: string
+  activeCodexSupplier?: string
+  activeMcpTemplates: string[]
+}
+
+// 工作模式切换结果
+export interface WorkModeSwitchResult {
+  success: boolean
+  message: string
+  backupId?: number
+  appliedAt?: string
+  stepsCompleted: string[]
+  duration?: number
+  appliedConfigurations?: string[]
+  error?: string
+}
+
+// 工作模式操作结果
+export interface WorkModeOperationResult {
+  success: boolean
+  operation: string
+  message: string
+  data?: any
+  error?: string
+  timestamp: string
+  duration?: number
+}

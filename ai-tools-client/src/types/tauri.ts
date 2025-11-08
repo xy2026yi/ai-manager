@@ -41,9 +41,12 @@ export interface TauriCommands {
   delete_config_history: (params: { backupId: number }) => Promise<any>
 
   // 工作模式相关命令
-  get_work_mode_config: (params: { modeName: string }) => Promise<any>
-  get_all_work_mode_configs: () => Promise<any>
-  update_work_mode_config: (params: any) => Promise<any>
+  get_work_mode_by_name: (params: { modeName: string }) => Promise<any>
+  list_work_mode_configs: () => Promise<any>
+  update_work_mode_by_id: (params: any) => Promise<any>
+  switch_work_mode: (params: any) => Promise<any>
+  get_work_mode_status: () => Promise<any>
+  rollback_work_mode: (params: { backupId: number }) => Promise<any>
 
   // 应用状态相关命令
   get_app_state: (params: { key: string }) => Promise<any>

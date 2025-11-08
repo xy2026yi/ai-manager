@@ -30,3 +30,9 @@ export interface OperationResult {
 export type PlatformType = 'windows' | 'macos' | 'linux'
 export type AiType = 'claude' | 'codex'
 export type WorkMode = 'claude_only' | 'codex_only' | 'claude_codex'
+
+// 重新导出所有类型
+export * from './supplier'
+export * from './mcpTemplate'
+export * from './config'
+export * from './mode'

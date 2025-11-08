@@ -337,14 +337,16 @@ export class ConfigFileManager {
       // 生成配置
       let result
       if (configType === 'claude' && suppliers.length > 0) {
+        const claudeSupplier = suppliers[0]!
         result = await configTemplateEngine.generateClaudeConfig(
-          suppliers[0],
+          claudeSupplier,
           templates.filter(t => t.aiType === 'claude'),
           variables
         )
       } else if (configType === 'codex' && suppliers.length > 0) {
+        const codexSupplier = suppliers[0]!
         result = await configTemplateEngine.generateCodexConfig(
-          suppliers[0],
+          codexSupplier,
           templates.filter(t => t.aiType === 'codex'),
           variables
         )

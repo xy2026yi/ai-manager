@@ -228,7 +228,9 @@ export class ConfigTemplateEngine {
     for (const pattern of patterns) {
       let match
       while ((match = pattern.exec(content)) !== null) {
-        variables.add(match[1].trim())
+        if (match[1]) {
+          variables.add(match[1].trim())
+        }
       }
     }
 
@@ -311,9 +313,15 @@ export class ConfigTemplateEngine {
       for (const line of lines) {
         const trimmed = line.trim()
         if (trimmed.startsWith('type = ')) {
-          config.type = trimmed.split('=')[1].trim().replace(/['"]/g, '') as 'stdio' | 'websocket'
+          const typeValue = trimmed.split('=')[1]?.trim().replace(/['"]/g, '')
+          if (typeValue) {
+            config.type = typeValue as 'stdio' | 'websocket'
+          }
         } else if (trimmed.startsWith('command = ')) {
-          config.command = trimmed.split('=')[1].trim().replace(/['"]/g, '')
+          const commandValue = trimmed.split('=')[1]?.trim().replace(/['"]/g, '')
+          if (commandValue) {
+            config.command = commandValue
+          }
         } else if (trimmed.startsWith('args = ')) {
           // 简化处理，实际需要更复杂的解析
           config.args = ['-y', 'mcp-server']
@@ -441,10 +449,13 @@ export class ConfigTemplateEngine {
     let inSection = false
 
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim()
+      const line = lines[i]
+      if (!line) continue
+
+      const trimmed = line.trim()
 
       // 跳过空行和注释
-      if (!line || line.startsWith('#')) {
+      if (!trimmed || trimmed.startsWith('#')) {
         continue
       }
 
@@ -456,7 +467,9 @@ export class ConfigTemplateEngine {
 
       // 检查键值对
       if (line.includes('=')) {
-        const [key, value] = line.split('=').map(s => s.trim())
+        const parts = line.split('=').map(s => s.trim())
+        const key = parts[0]
+        const value = parts[1]
 
         if (!key) {
           throw new Error(`第 ${i + 1} 行: 键不能为空`)
