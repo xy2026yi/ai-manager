@@ -1,0 +1,484 @@
+{
+  "tasks": [
+    {
+      "id": "7e3af20c-be0c-479f-b9e2-42a33f59ea4f",
+      "name": "项目初始化和环境搭建",
+      "description": "创建Vue3+Vite+TypeScript项目，配置Tauri环境，安装Element Plus和Pinia，建立基础目录结构和开发规范",
+      "notes": "确保Node.js版本>=18，Rust环境已安装。配置好VS Code插件和开发环境。",
+      "status": "pending",
+      "dependencies": [],
+      "createdAt": "2025-11-08T03:05:55.699Z",
+      "updatedAt": "2025-11-08T03:05:55.699Z",
+      "relatedFiles": [
+        {
+          "path": "package.json",
+          "type": "CREATE",
+          "description": "项目配置和依赖管理"
+        },
+        {
+          "path": "vite.config.ts",
+          "type": "CREATE",
+          "description": "Vite构建配置"
+        },
+        {
+          "path": "tsconfig.json",
+          "type": "CREATE",
+          "description": "TypeScript配置"
+        },
+        {
+          "path": "src/main.ts",
+          "type": "CREATE",
+          "description": "应用入口文件"
+        },
+        {
+          "path": "src/App.vue",
+          "type": "CREATE",
+          "description": "根组件"
+        },
+        {
+          "path": "src/router/index.ts",
+          "type": "CREATE",
+          "description": "路由配置"
+        },
+        {
+          "path": ".eslintrc.cjs",
+          "type": "CREATE",
+          "description": "ESLint配置"
+        },
+        {
+          "path": ".prettierrc",
+          "type": "CREATE",
+          "description": "Prettier配置"
+        }
+      ],
+      "implementationGuide": "1. 使用npm create vue@latest创建项目\n2. 安装依赖：npm install element-plus @element-plus/icons-vue pinia\n3. 添加Tauri：npm install --save-dev @tauri-apps/cli\n4. 初始化Tauri：npm run tauri init\n5. 配置TypeScript、ESLint、Prettier\n6. 创建标准目录结构：src/components, src/views, src/stores, src/services, src/types, src/utils\n7. 设置基础路由和布局组件",
+      "verificationCriteria": "1. 项目能正常启动：npm run dev和npm run tauri dev\n2. TypeScript编译无错误\n3. ESLint和Prettier正常工作\n4. Element Plus组件可正常使用\n5. 路由导航功能正常",
+      "analysisResult": "AI工具管理平台开发项目：基于Vue3+TypeScript+Element Plus+Tauri技术栈，构建跨平台桌面应用，实现供应商管理、MCP服务器模板管理、模式切换和供应商切换四大核心功能模块。项目采用SQLite本地数据库，支持配置文件安全操作和备份恢复，提供完整的用户界面和跨平台兼容性。"
+    },
+    {
+      "id": "801a8f26-2472-4fc1-b324-3bf4beaacd9d",
+      "name": "数据库设计和模型创建",
+      "description": "设计SQLite数据库模式，创建供应商、MCP模板、配置历史等表结构，实现基础的数据库连接和操作接口",
+      "notes": "数据库文件将存储在用户数据目录，需要考虑跨平台路径处理。",
+      "status": "pending",
+      "dependencies": [
+        {
+          "taskId": "7e3af20c-be0c-479f-b9e2-42a33f59ea4f"
+        }
+      ],
+      "createdAt": "2025-11-08T03:05:55.699Z",
+      "updatedAt": "2025-11-08T03:05:55.699Z",
+      "relatedFiles": [
+        {
+          "path": "src-tauri/Cargo.toml",
+          "type": "TO_MODIFY",
+          "description": "添加SQLx依赖"
+        },
+        {
+          "path": "src-tauri/src/database.rs",
+          "type": "CREATE",
+          "description": "数据库连接和初始化"
+        },
+        {
+          "path": "src-tauri/src/models/mod.rs",
+          "type": "CREATE",
+          "description": "数据模型模块"
+        },
+        {
+          "path": "src-tauri/src/models/supplier.rs",
+          "type": "CREATE",
+          "description": "供应商数据模型"
+        },
+        {
+          "path": "src-tauri/src/models/mcp_template.rs",
+          "type": "CREATE",
+          "description": "MCP模板数据模型"
+        },
+        {
+          "path": "src-tauri/src/migrations.sql",
+          "type": "CREATE",
+          "description": "数据库迁移脚本"
+        }
+      ],
+      "implementationGuide": "1. 在Rust后端添加依赖：sqlx = { version = \"0.7\", features = [\"runtime-tokio-rustls\", \"sqlite\"] }\n2. 创建数据库初始化脚本\n3. 实现数据库连接池\n4. 创建Rust结构体映射数据库表\n5. 实现基础CRUD操作函数\n6. 创建数据库迁移机制",
+      "verificationCriteria": "1. 数据库能正常创建和连接\n2. 所有表结构创建成功\n3. 基础的增删改查操作正常\n4. 数据库事务处理正常\n5. 错误处理机制完善",
+      "analysisResult": "AI工具管理平台开发项目：基于Vue3+TypeScript+Element Plus+Tauri技术栈，构建跨平台桌面应用，实现供应商管理、MCP服务器模板管理、模式切换和供应商切换四大核心功能模块。项目采用SQLite本地数据库，支持配置文件安全操作和备份恢复，提供完整的用户界面和跨平台兼容性。"
+    },
+    {
+      "id": "99062b79-4b52-43f7-9b32-37b31c215e7b",
+      "name": "供应商管理模块实现",
+      "description": "实现供应商的增删改查功能，支持Claude和Codex两种类型，包含表单验证、连接测试和数据持久化",
+      "notes": "Claude和Codex供应商字段不同，需要动态表单支持。连接测试需要异步处理。",
+      "status": "pending",
+      "dependencies": [
+        {
+          "taskId": "801a8f26-2472-4fc1-b324-3bf4beaacd9d"
+        }
+      ],
+      "createdAt": "2025-11-08T03:05:55.699Z",
+      "updatedAt": "2025-11-08T03:05:55.699Z",
+      "relatedFiles": [
+        {
+          "path": "src/types/supplier.ts",
+          "type": "CREATE",
+          "description": "供应商类型定义"
+        },
+        {
+          "path": "src/stores/supplier.ts",
+          "type": "CREATE",
+          "description": "供应商状态管理"
+        },
+        {
+          "path": "src/views/SupplierManager.vue",
+          "type": "CREATE",
+          "description": "供应商管理页面"
+        },
+        {
+          "path": "src/components/forms/SupplierForm.vue",
+          "type": "CREATE",
+          "description": "供应商表单组件"
+        },
+        {
+          "path": "src/components/tables/SupplierTable.vue",
+          "type": "CREATE",
+          "description": "供应商列表组件"
+        },
+        {
+          "path": "src-tauri/src/commands/supplier.rs",
+          "type": "CREATE",
+          "description": "供应商API命令"
+        },
+        {
+          "path": "src/services/supplier.ts",
+          "type": "CREATE",
+          "description": "供应商前端服务"
+        }
+      ],
+      "implementationGuide": "1. 创建供应商TypeScript类型定义\n2. 实现Pinia状态管理store\n3. 创建供应商表单组件（支持动态字段）\n4. 创建供应商列表表格组件\n5. 实现Tauri后端命令API\n6. 添加供应商连接测试功能\n7. 实现导入导出功能\n8. 添加表单验证和错误处理",
+      "verificationCriteria": "1. 供应商增删改查功能完整\n2. Claude和Codex类型正确处理\n3. 表单验证规则正确执行\n4. 连接测试功能正常\n5. 导入导出功能正常\n6. 错误提示友好清晰",
+      "analysisResult": "AI工具管理平台开发项目：基于Vue3+TypeScript+Element Plus+Tauri技术栈，构建跨平台桌面应用，实现供应商管理、MCP服务器模板管理、模式切换和供应商切换四大核心功能模块。项目采用SQLite本地数据库，支持配置文件安全操作和备份恢复，提供完整的用户界面和跨平台兼容性。"
+    },
+    {
+      "id": "98a04bf5-c5ca-448f-ba44-68d54785d0a4",
+      "name": "MCP服务器模板管理模块实现",
+      "description": "实现MCP服务器模板的管理，支持JSON和TOML格式，区分平台和AI工具类型，包含模板预览和验证功能",
+      "notes": "需要支持代码语法高亮和格式化。内置模板需要覆盖常用MCP服务器。",
+      "status": "pending",
+      "dependencies": [
+        {
+          "taskId": "801a8f26-2472-4fc1-b324-3bf4beaacd9d"
+        }
+      ],
+      "createdAt": "2025-11-08T03:05:55.699Z",
+      "updatedAt": "2025-11-08T03:05:55.699Z",
+      "relatedFiles": [
+        {
+          "path": "src/types/mcpTemplate.ts",
+          "type": "CREATE",
+          "description": "MCP模板类型定义"
+        },
+        {
+          "path": "src/stores/mcpTemplate.ts",
+          "type": "CREATE",
+          "description": "MCP模板状态管理"
+        },
+        {
+          "path": "src/views/McpTemplateManager.vue",
+          "type": "CREATE",
+          "description": "MCP模板管理页面"
+        },
+        {
+          "path": "src/components/forms/McpTemplateForm.vue",
+          "type": "CREATE",
+          "description": "MCP模板表单"
+        },
+        {
+          "path": "src/components/editors/CodeEditor.vue",
+          "type": "CREATE",
+          "description": "代码编辑器组件"
+        },
+        {
+          "path": "src-tauri/src/commands/mcp_template.rs",
+          "type": "CREATE",
+          "description": "MCP模板API命令"
+        },
+        {
+          "path": "src/data/builtin_templates.ts",
+          "type": "CREATE",
+          "description": "内置模板数据"
+        }
+      ],
+      "implementationGuide": "1. 创建MCP模板TypeScript类型定义\n2. 实现模板管理Pinia store\n3. 创建模板编辑器组件（支持JSON/TOML高亮）\n4. 创建模板列表和分类组件\n5. 实现模板预览功能\n6. 添加内置模板数据\n7. 实现模板验证和格式检查\n8. 支持模板导入导出和分享",
+      "verificationCriteria": "1. 模板增删改查功能完整\n2. JSON和TOML格式正确支持\n3. 代码高亮和格式化正常\n4. 模板预览功能正常\n5. 模板验证规则正确\n6. 内置模板数据完整",
+      "analysisResult": "AI工具管理平台开发项目：基于Vue3+TypeScript+Element Plus+Tauri技术栈，构建跨平台桌面应用，实现供应商管理、MCP服务器模板管理、模式切换和供应商切换四大核心功能模块。项目采用SQLite本地数据库，支持配置文件安全操作和备份恢复，提供完整的用户界面和跨平台兼容性。"
+    },
+    {
+      "id": "13e26d37-3d38-4d6a-bf3c-b1103533c6f3",
+      "name": "配置文件管理和模板引擎",
+      "description": "实现安全的配置文件操作，包含备份恢复机制，模板引擎生成配置文件，支持Claude和Codex的配置格式",
+      "notes": "配置文件操作必须安全可靠，需要完整的备份恢复机制。支持跨平台路径处理。",
+      "status": "pending",
+      "dependencies": [
+        {
+          "taskId": "99062b79-4b52-43f7-9b32-37b31c215e7b"
+        },
+        {
+          "taskId": "98a04bf5-c5ca-448f-ba44-68d54785d0a4"
+        }
+      ],
+      "createdAt": "2025-11-08T03:05:55.699Z",
+      "updatedAt": "2025-11-08T03:05:55.699Z",
+      "relatedFiles": [
+        {
+          "path": "src/types/config.ts",
+          "type": "CREATE",
+          "description": "配置文件类型定义"
+        },
+        {
+          "path": "src/services/configManager.ts",
+          "type": "CREATE",
+          "description": "配置管理服务"
+        },
+        {
+          "path": "src/services/templateEngine.ts",
+          "type": "CREATE",
+          "description": "配置模板引擎"
+        },
+        {
+          "path": "src/services/platform.ts",
+          "type": "CREATE",
+          "description": "平台适配服务"
+        },
+        {
+          "path": "src-tauri/src/commands/config.rs",
+          "type": "CREATE",
+          "description": "配置管理API"
+        },
+        {
+          "path": "src-tauri/src/services/file_ops.rs",
+          "type": "CREATE",
+          "description": "文件操作服务"
+        },
+        {
+          "path": "src/components/config/ConfigPreview.vue",
+          "type": "CREATE",
+          "description": "配置预览组件"
+        }
+      ],
+      "implementationGuide": "1. 创建配置文件类型定义\n2. 实现配置管理器服务\n3. 创建配置模板引擎\n4. 实现配置文件备份和恢复\n5. 添加配置验证机制\n6. 实现原子性配置更新\n7. 创建配置历史管理\n8. 添加平台路径适配",
+      "verificationCriteria": "1. 配置文件读写安全可靠\n2. 备份恢复机制完整\n3. 模板引擎生成正确配置\n4. 跨平台路径处理正确\n5. 配置验证功能正常\n6. 原子性更新保证一致性",
+      "analysisResult": "AI工具管理平台开发项目：基于Vue3+TypeScript+Element Plus+Tauri技术栈，构建跨平台桌面应用，实现供应商管理、MCP服务器模板管理、模式切换和供应商切换四大核心功能模块。项目采用SQLite本地数据库，支持配置文件安全操作和备份恢复，提供完整的用户界面和跨平台兼容性。"
+    },
+    {
+      "id": "9a900a00-23cc-4d5d-bc6d-d3561aa70a90",
+      "name": "模式管理和切换模块实现",
+      "description": "实现三种工作模式的管理和切换，包含模式状态管理、配置文件自动更新、切换进度显示和错误处理",
+      "notes": "模式切换涉及多个配置文件更新，需要保证原子性操作。切换过程需要有清晰的进度提示。",
+      "status": "pending",
+      "dependencies": [
+        {
+          "taskId": "13e26d37-3d38-4d6a-bf3c-b1103533c6f3"
+        }
+      ],
+      "createdAt": "2025-11-08T03:05:55.699Z",
+      "updatedAt": "2025-11-08T03:05:55.699Z",
+      "relatedFiles": [
+        {
+          "path": "src/types/mode.ts",
+          "type": "CREATE",
+          "description": "工作模式类型定义"
+        },
+        {
+          "path": "src/stores/mode.ts",
+          "type": "CREATE",
+          "description": "模式状态管理"
+        },
+        {
+          "path": "src/views/ModeManager.vue",
+          "type": "CREATE",
+          "description": "模式管理页面"
+        },
+        {
+          "path": "src/components/widgets/ModeSelector.vue",
+          "type": "CREATE",
+          "description": "模式选择器"
+        },
+        {
+          "path": "src/components/dialogs/SwitchProgressDialog.vue",
+          "type": "CREATE",
+          "description": "切换进度对话框"
+        },
+        {
+          "path": "src-tauri/src/commands/mode.rs",
+          "type": "CREATE",
+          "description": "模式管理API"
+        },
+        {
+          "path": "src/services/modeSwitcher.ts",
+          "type": "CREATE",
+          "description": "模式切换服务"
+        }
+      ],
+      "implementationGuide": "1. 创建模式管理TypeScript类型\n2. 实现模式切换Pinia store\n3. 创建模式选择器组件\n4. 实现模式切换逻辑和流程\n5. 添加切换进度显示\n6. 实现配置文件自动更新\n7. 添加模式切换历史记录\n8. 创建切换失败回滚机制",
+      "verificationCriteria": "1. 三种模式正确识别和切换\n2. 模式切换流程完整可靠\n3. 配置文件自动更新正确\n4. 切换进度显示清晰\n5. 错误处理和回滚机制完善\n6. 模式状态实时同步",
+      "analysisResult": "AI工具管理平台开发项目：基于Vue3+TypeScript+Element Plus+Tauri技术栈，构建跨平台桌面应用，实现供应商管理、MCP服务器模板管理、模式切换和供应商切换四大核心功能模块。项目采用SQLite本地数据库，支持配置文件安全操作和备份恢复，提供完整的用户界面和跨平台兼容性。"
+    },
+    {
+      "id": "f4550df3-3cc1-42ab-92ef-4dd3129b4e7d",
+      "name": "供应商切换模块实现",
+      "description": "实现供应商的动态切换功能，根据当前模式过滤可用供应商，支持快速切换和配置预览",
+      "notes": "供应商切换需要根据模式动态过滤，切换过程需要实时预览配置变更。",
+      "status": "pending",
+      "dependencies": [
+        {
+          "taskId": "9a900a00-23cc-4d5d-bc6d-d3561aa70a90"
+        }
+      ],
+      "createdAt": "2025-11-08T03:05:55.699Z",
+      "updatedAt": "2025-11-08T03:05:55.699Z",
+      "relatedFiles": [
+        {
+          "path": "src/types/supplierSwitcher.ts",
+          "type": "CREATE",
+          "description": "供应商切换类型定义"
+        },
+        {
+          "path": "src/services/supplierSwitcher.ts",
+          "type": "CREATE",
+          "description": "供应商切换服务"
+        },
+        {
+          "path": "src/views/SupplierSwitcher.vue",
+          "type": "CREATE",
+          "description": "供应商切换页面"
+        },
+        {
+          "path": "src/components/widgets/SupplierSelector.vue",
+          "type": "CREATE",
+          "description": "供应商选择器"
+        },
+        {
+          "path": "src/components/widgets/ConfigDiff.vue",
+          "type": "CREATE",
+          "description": "配置差异对比"
+        },
+        {
+          "path": "src-tauri/src/commands/supplier_switcher.rs",
+          "type": "CREATE",
+          "description": "供应商切换API"
+        }
+      ],
+      "implementationGuide": "1. 创建供应商切换类型定义\n2. 实现供应商切换服务\n3. 创建供应商选择器组件\n4. 实现供应商过滤逻辑\n5. 添加配置预览功能\n6. 实现快速切换机制\n7. 添加切换历史记录\n8. 创建供应商对比功能",
+      "verificationCriteria": "1. 供应商过滤逻辑正确\n2. 快速切换功能流畅\n3. 配置预览准确显示\n4. 配置差异对比清晰\n5. 切换历史记录完整\n6. 错误处理机制完善",
+      "analysisResult": "AI工具管理平台开发项目：基于Vue3+TypeScript+Element Plus+Tauri技术栈，构建跨平台桌面应用，实现供应商管理、MCP服务器模板管理、模式切换和供应商切换四大核心功能模块。项目采用SQLite本地数据库，支持配置文件安全操作和备份恢复，提供完整的用户界面和跨平台兼容性。"
+    },
+    {
+      "id": "97db2be9-b004-486c-9add-be7ce32c0f69",
+      "name": "用户界面优化和体验提升",
+      "description": "优化整体用户界面，添加响应式设计、主题切换、国际化支持、操作引导和帮助系统",
+      "notes": "用户体验是关键，需要保证界面美观、操作流畅、提示清晰。",
+      "status": "pending",
+      "dependencies": [
+        {
+          "taskId": "f4550df3-3cc1-42ab-92ef-4dd3129b4e7d"
+        }
+      ],
+      "createdAt": "2025-11-08T03:05:55.699Z",
+      "updatedAt": "2025-11-08T03:05:55.699Z",
+      "relatedFiles": [
+        {
+          "path": "src/assets/styles/theme.css",
+          "type": "CREATE",
+          "description": "主题样式文件"
+        },
+        {
+          "path": "src/components/common/AppHeader.vue",
+          "type": "CREATE",
+          "description": "应用头部组件"
+        },
+        {
+          "path": "src/components/common/SideNav.vue",
+          "type": "CREATE",
+          "description": "侧边导航组件"
+        },
+        {
+          "path": "src/components/common/HelpGuide.vue",
+          "type": "CREATE",
+          "description": "帮助引导组件"
+        },
+        {
+          "path": "src/locales/index.ts",
+          "type": "CREATE",
+          "description": "国际化配置"
+        },
+        {
+          "path": "src/utils/shortcuts.ts",
+          "type": "CREATE",
+          "description": "快捷键管理"
+        },
+        {
+          "path": "src/components/ui/LoadingSpinner.vue",
+          "type": "CREATE",
+          "description": "加载动画组件"
+        }
+      ],
+      "implementationGuide": "1. 实现响应式布局适配\n2. 添加暗黑/明亮主题切换\n3. 实现国际化（i18n）支持\n4. 创建操作引导和帮助文档\n5. 添加快捷键支持\n6. 优化加载状态和错误提示\n7. 实现数据自动保存\n8. 添加操作确认对话框",
+      "verificationCriteria": "1. 响应式布局在不同屏幕尺寸下正常\n2. 主题切换功能正常\n3. 国际化文本正确显示\n4. 帮助引导内容完整\n5. 快捷键功能正常\n6. 加载和错误状态美观\n7. 自动保存功能可靠",
+      "analysisResult": "AI工具管理平台开发项目：基于Vue3+TypeScript+Element Plus+Tauri技术栈，构建跨平台桌面应用，实现供应商管理、MCP服务器模板管理、模式切换和供应商切换四大核心功能模块。项目采用SQLite本地数据库，支持配置文件安全操作和备份恢复，提供完整的用户界面和跨平台兼容性。"
+    },
+    {
+      "id": "68c49d5f-9ad7-4982-9baf-582034ad73eb",
+      "name": "跨平台测试和打包优化",
+      "description": "进行三大平台的兼容性测试，优化应用性能，创建安装包，完善文档和部署流程",
+      "notes": "跨平台兼容性是重点，需要在每个平台上进行充分测试。性能优化和安全性检查不可忽视。",
+      "status": "pending",
+      "dependencies": [
+        {
+          "taskId": "97db2be9-b004-486c-9add-be7ce32c0f69"
+        }
+      ],
+      "createdAt": "2025-11-08T03:05:55.699Z",
+      "updatedAt": "2025-11-08T03:05:55.699Z",
+      "relatedFiles": [
+        {
+          "path": "tauri.conf.json",
+          "type": "TO_MODIFY",
+          "description": "Tauri配置优化"
+        },
+        {
+          "path": "src-tauri/Cargo.toml",
+          "type": "TO_MODIFY",
+          "description": "依赖优化和特性配置"
+        },
+        {
+          "path": ".github/workflows/build.yml",
+          "type": "CREATE",
+          "description": "CI/CD构建流程"
+        },
+        {
+          "path": "docs/user-guide.md",
+          "type": "CREATE",
+          "description": "用户使用指南"
+        },
+        {
+          "path": "docs/development.md",
+          "type": "CREATE",
+          "description": "开发文档"
+        },
+        {
+          "path": "README.md",
+          "type": "TO_MODIFY",
+          "description": "项目说明文档"
+        },
+        {
+          "path": "scripts/build.js",
+          "type": "CREATE",
+          "description": "构建脚本"
+        }
+      ],
+      "implementationGuide": "1. 配置跨平台构建环境\n2. 进行Windows/macOS/Linux功能测试\n3. 优化应用启动速度和内存占用\n4. 配置自动更新机制\n5. 创建各平台安装包\n6. 编写用户使用文档\n7. 设置CI/CD自动化流程\n8. 进行安全性检查和优化",
+      "verificationCriteria": "1. 三大平台功能完全正常\n2. 应用启动速度和性能达标\n3. 安装包正常安装和卸载\n4. 自动更新机制工作正常\n5. 文档内容完整准确\n6. CI/CD流程稳定可靠\n7. 安全性检查通过",
+      "analysisResult": "AI工具管理平台开发项目：基于Vue3+TypeScript+Element Plus+Tauri技术栈，构建跨平台桌面应用，实现供应商管理、MCP服务器模板管理、模式切换和供应商切换四大核心功能模块。项目采用SQLite本地数据库，支持配置文件安全操作和备份恢复，提供完整的用户界面和跨平台兼容性。"
+    }
+  ]
+}
