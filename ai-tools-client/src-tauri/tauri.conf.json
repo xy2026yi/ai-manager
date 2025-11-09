@@ -32,9 +32,11 @@
     "shortDescription": "AI工具供应商管理平台",
     "longDescription": "管理AI工具供应商、MCP服务器模板和工作模式的跨平台桌面应用",
     "icon": [
-      "icons/32x32.png",
-      "icons/128x128.png",
-      "icons/128x128@2x.png"
+      "icons/linux/icon-32x32.png",
+      "icons/linux/icon-128x128.png",
+      "icons/macos/icon_128x128@2x.png",
+      "icons/windows/icon-32x32.png",
+      "icons/windows/app.ico"
     ],
     "windows": {
       "webviewInstallMode": {
