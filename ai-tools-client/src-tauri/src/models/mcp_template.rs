@@ -361,20 +361,31 @@ mod tests {
     use super::*;
     use crate::services::database::Database;
     use sqlx::SqlitePool;
-    use tempfile::tempdir;
+    use tempfile::{tempdir, TempDir};
 
-    async fn create_test_pool() -> SqlitePool {
+    struct TestDb {
+        _dir: TempDir,
+        pool: SqlitePool,
+    }
+
+    async fn create_test_pool() -> TestDb {
         let temp_dir = tempdir().unwrap();
         let db_path = temp_dir.path().join("test.db");
         let db_url = format!("sqlite://{}", db_path.to_string_lossy());
 
         Database::new(&db_url).await.unwrap();
-        SqlitePool::connect(&db_url).await.unwrap()
+        let pool = SqlitePool::connect(&db_url).await.unwrap();
+
+        TestDb {
+            _dir: temp_dir,
+            pool,
+        }
     }
 
     #[tokio::test]
     async fn test_create_mcp_template() {
-        let pool = create_test_pool().await;
+        let test_db = create_test_pool().await;
+        let pool = &test_db.pool;
 
         let request = CreateMcpTemplateRequest {
             name: "Test Template".to_string(),
@@ -388,7 +399,7 @@ mod tests {
             tags: Some(vec!["test".to_string(), "example".to_string()]),
         };
 
-        let template = McpTemplate::create(&pool, request).await.unwrap();
+        let template = McpTemplate::create(pool, request).await.unwrap();
         assert!(template.id.is_some());
         assert_eq!(template.name, "Test Template");
         assert_eq!(template.ai_type, "claude");

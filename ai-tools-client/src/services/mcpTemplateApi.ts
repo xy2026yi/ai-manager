@@ -3,14 +3,17 @@ import type {
   CreateMcpTemplateRequest,
   UpdateMcpTemplateRequest,
   McpTemplateValidationResult,
-  McpTemplateCategory
+  McpTemplateCategory,
+  ApiResponse
 } from '@/types'
+import '@/types/tauri'
+import { TauriHelper } from '@/utils/tauriHelper'
 
 class McpTemplateApiService {
   // 获取MCP模板列表
   async listMcpTemplates(aiType?: string, platformType?: string): Promise<McpTemplate[]> {
     try {
-      const result = await window.__TAURI__.invoke('list_mcp_templates', {
+      const result = await TauriHelper.invokeTauri<ApiResponse<McpTemplate[]>>('list_mcp_templates', {
         aiType,
         platformType
       })
@@ -24,9 +27,9 @@ class McpTemplateApiService {
   // 创建MCP模板
   async createMcpTemplate(request: CreateMcpTemplateRequest): Promise<McpTemplate> {
     try {
-      const result = await window.__TAURI__.invoke('create_mcp_template', request)
+      const result = await TauriHelper.invokeTauri<ApiResponse<McpTemplate>>('create_mcp_template', request)
       if (result.success) {
-        return result.data
+        return result.data!
       } else {
         throw new Error(result.message || '创建MCP模板失败')
       }
@@ -39,9 +42,9 @@ class McpTemplateApiService {
   // 更新MCP模板
   async updateMcpTemplate(request: UpdateMcpTemplateRequest): Promise<McpTemplate | null> {
     try {
-      const result = await window.__TAURI__.invoke('update_mcp_template', request)
+      const result = await TauriHelper.invokeTauri<ApiResponse<McpTemplate>>('update_mcp_template', request)
       if (result.success) {
-        return result.data
+        return result.data!
       } else {
         throw new Error(result.message || '更新MCP模板失败')
       }
@@ -54,8 +57,8 @@ class McpTemplateApiService {
   // 删除MCP模板
   async deleteMcpTemplate(id: number): Promise<boolean> {
     try {
-      const result = await window.__TAURI__.invoke('delete_mcp_template', { id })
-      return result.success && result.data
+      const result = await TauriHelper.invokeTauri<ApiResponse<boolean>>('delete_mcp_template', { id })
+      return result.success && !!result.data
     } catch (error) {
       console.error('删除MCP模板失败:', error)
       throw error
@@ -65,7 +68,7 @@ class McpTemplateApiService {
   // 根据ID获取MCP模板
   async getMcpTemplateById(id: number): Promise<McpTemplate | null> {
     try {
-      const result = await window.__TAURI__.invoke('get_mcp_template_by_id', { id })
+      const result = await TauriHelper.invokeTauri<ApiResponse<McpTemplate>>('get_mcp_template_by_id', { id })
       return result.data || null
     } catch (error) {
       console.error('获取MCP模板失败:', error)
@@ -76,8 +79,8 @@ class McpTemplateApiService {
   // 验证MCP模板
   async validateMcpTemplate(request: CreateMcpTemplateRequest): Promise<McpTemplateValidationResult> {
     try {
-      const result = await window.__TAURI__.invoke('validate_mcp_template', request)
-      return result.data
+      const result = await TauriHelper.invokeTauri<ApiResponse<McpTemplateValidationResult>>('validate_mcp_template', request)
+      return result.data!
     } catch (error) {
       console.error('验证MCP模板失败:', error)
       throw error
@@ -87,7 +90,7 @@ class McpTemplateApiService {
   // 获取MCP模板分类
   async getMcpTemplateCategories(): Promise<McpTemplateCategory[]> {
     try {
-      const result = await window.__TAURI__.invoke('get_mcp_template_categories')
+      const result = await TauriHelper.invokeTauri<ApiResponse<McpTemplateCategory[]>>('get_mcp_template_categories')
       return result.data || []
     } catch (error) {
       console.error('获取MCP模板分类失败:', error)
@@ -98,8 +101,8 @@ class McpTemplateApiService {
   // 增加模板使用次数
   async incrementTemplateUsage(id: number): Promise<boolean> {
     try {
-      const result = await window.__TAURI__.invoke('increment_template_usage', { id })
-      return result.success && result.data
+      const result = await TauriHelper.invokeTauri<ApiResponse<boolean>>('increment_template_usage', { id })
+      return result.success && !!result.data
     } catch (error) {
       console.error('增加模板使用次数失败:', error)
       throw error
@@ -109,12 +112,12 @@ class McpTemplateApiService {
   // 克隆MCP模板
   async cloneMcpTemplate(id: number, newName: string): Promise<McpTemplate | null> {
     try {
-      const result = await window.__TAURI__.invoke('clone_mcp_template', {
+      const result = await TauriHelper.invokeTauri<ApiResponse<McpTemplate>>('clone_mcp_template', {
         id,
         newName
       })
       if (result.success) {
-        return result.data
+        return result.data!
       } else {
         throw new Error(result.message || '克隆MCP模板失败')
       }
@@ -127,7 +130,7 @@ class McpTemplateApiService {
   // 获取MCP模板统计
   async getMcpTemplateStats(): Promise<any> {
     try {
-      const result = await window.__TAURI__.invoke('get_mcp_template_stats')
+      const result = await TauriHelper.invokeTauri<ApiResponse<any>>('get_mcp_template_stats')
       return result.data
     } catch (error) {
       console.error('获取MCP模板统计失败:', error)
@@ -138,11 +141,11 @@ class McpTemplateApiService {
   // 导入MCP模板
   async importMcpTemplates(templates: CreateMcpTemplateRequest[]): Promise<McpTemplate[]> {
     try {
-      const result = await window.__TAURI__.invoke('import_mcp_templates', {
+      const result = await TauriHelper.invokeTauri<ApiResponse<McpTemplate[]>>('import_mcp_templates', {
         templates
       })
       if (result.success) {
-        return result.data
+        return result.data!
       } else {
         throw new Error(result.message || '导入MCP模板失败')
       }
@@ -155,7 +158,7 @@ class McpTemplateApiService {
   // 导出MCP模板
   async exportMcpTemplates(): Promise<McpTemplate[]> {
     try {
-      const result = await window.__TAURI__.invoke('export_mcp_templates')
+      const result = await TauriHelper.invokeTauri<ApiResponse<McpTemplate[]>>('export_mcp_templates')
       return result.data || []
     } catch (error) {
       console.error('导出MCP模板失败:', error)

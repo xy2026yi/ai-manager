@@ -3,22 +3,24 @@ import type {
   CreateSupplierRequest,
   UpdateSupplierRequest,
   ConnectionTestResult,
-  ApiResponse,
   SupplierHealth,
   SupplierSwitchRequest,
   SupplierSwitchResult,
   SupplierSwitchProgress,
   FailoverConfig,
   SupplierPerformanceMetrics,
-  SupplierSwitchHistory
+  SupplierSwitchHistory,
+  ApiResponse
 } from '@/types'
 import '@/types/tauri'
+import { TauriHelper } from '@/utils/tauriHelper'
 
 class SupplierApiService {
+
   // 获取供应商列表
   async listSuppliers(type?: string): Promise<Supplier[]> {
     try {
-      const result = await window.__TAURI__.invoke('list_suppliers', {
+      const result = await TauriHelper.invokeTauri<ApiResponse<Supplier[]>>('list_suppliers', {
         supplierType: type
       })
       return result.data || []
@@ -31,9 +33,9 @@ class SupplierApiService {
   // 创建供应商
   async createSupplier(request: CreateSupplierRequest): Promise<Supplier> {
     try {
-      const result = await window.__TAURI__.invoke('create_supplier', request)
+      const result = await TauriHelper.invokeTauri<ApiResponse<Supplier>>('create_supplier', request)
       if (result.success) {
-        return result.data
+        return result.data!
       } else {
         throw new Error(result.message || '创建供应商失败')
       }
@@ -46,9 +48,9 @@ class SupplierApiService {
   // 更新供应商
   async updateSupplier(request: UpdateSupplierRequest): Promise<Supplier> {
     try {
-      const result = await window.__TAURI__.invoke('update_supplier', request)
+      const result = await TauriHelper.invokeTauri<ApiResponse<Supplier>>('update_supplier', request)
       if (result.success) {
-        return result.data
+        return result.data!
       } else {
         throw new Error(result.message || '更新供应商失败')
       }
@@ -61,8 +63,8 @@ class SupplierApiService {
   // 删除供应商
   async deleteSupplier(id: number): Promise<boolean> {
     try {
-      const result = await window.__TAURI__.invoke('delete_supplier', { id })
-      return result.success && result.data
+      const result = await TauriHelper.invokeTauri<ApiResponse<boolean>>('delete_supplier', { id })
+      return result.success && !!result.data
     } catch (error) {
       console.error('删除供应商失败:', error)
       throw error
@@ -72,7 +74,7 @@ class SupplierApiService {
   // 根据ID获取供应商
   async getSupplierById(id: number): Promise<Supplier | null> {
     try {
-      const result = await window.__TAURI__.invoke('get_supplier_by_id', { id })
+      const result = await TauriHelper.invokeTauri<ApiResponse<Supplier>>('get_supplier_by_id', { id })
       return result.data || null
     } catch (error) {
       console.error('获取供应商失败:', error)
@@ -83,11 +85,11 @@ class SupplierApiService {
   // 设置活跃供应商
   async setActiveSupplier(id: number, type: string): Promise<boolean> {
     try {
-      const result = await window.__TAURI__.invoke('set_active_supplier', {
+      const result = await TauriHelper.invokeTauri<ApiResponse<boolean>>('set_active_supplier', {
         id,
         type
       })
-      return result.success && result.data
+      return result.success && !!result.data
     } catch (error) {
       console.error('设置活跃供应商失败:', error)
       throw error
@@ -97,11 +99,11 @@ class SupplierApiService {
   // 测试供应商连接
   async testConnection(supplier: Supplier): Promise<ConnectionTestResult> {
     try {
-      const result = await window.__TAURI__.invoke('test_supplier_connection', {
+      const result = await TauriHelper.invokeTauri<ApiResponse<ConnectionTestResult>>('test_supplier_connection', {
         supplier
       })
       if (result.success) {
-        return result.data
+        return result.data!
       } else {
         throw new Error(result.message || '连接测试失败')
       }
@@ -114,10 +116,10 @@ class SupplierApiService {
   // 验证供应商配置
   async validateConfig(supplier: Supplier): Promise<boolean> {
     try {
-      const result = await window.__TAURI__.invoke('validate_supplier_config', {
+      const result = await TauriHelper.invokeTauri<ApiResponse<boolean>>('validate_supplier_config', {
         supplier
       })
-      return result.success && result.data
+      return result.success && !!result.data
     } catch (error) {
       console.error('配置验证失败:', error)
       throw error
@@ -127,7 +129,7 @@ class SupplierApiService {
   // 获取供应商统计
   async getSupplierStats(): Promise<any> {
     try {
-      const result = await window.__TAURI__.invoke('get_supplier_stats')
+      const result = await TauriHelper.invokeTauri<ApiResponse<any>>('get_supplier_stats')
       return result.data
     } catch (error) {
       console.error('获取供应商统计失败:', error)
@@ -138,11 +140,11 @@ class SupplierApiService {
   // 导入供应商
   async importSuppliers(suppliers: CreateSupplierRequest[]): Promise<Supplier[]> {
     try {
-      const result = await window.__TAURI__.invoke('import_suppliers', {
+      const result = await TauriHelper.invokeTauri<ApiResponse<Supplier[]>>('import_suppliers', {
         suppliers
       })
       if (result.success) {
-        return result.data
+        return result.data!
       } else {
         throw new Error(result.message || '导入供应商失败')
       }
@@ -155,7 +157,7 @@ class SupplierApiService {
   // 导出供应商
   async exportSuppliers(): Promise<Supplier[]> {
     try {
-      const result = await window.__TAURI__.invoke('export_suppliers')
+      const result = await TauriHelper.invokeTauri<ApiResponse<Supplier[]>>('export_suppliers')
       return result.data || []
     } catch (error) {
       console.error('导出供应商失败:', error)
@@ -168,10 +170,10 @@ class SupplierApiService {
   // 检查单个供应商健康状态
   async checkSupplierHealth(supplierId: number): Promise<SupplierHealth> {
     try {
-      const result = await (window.__TAURI__ as any).invoke('check_supplier_health', {
+      const result = await TauriHelper.invokeTauri<ApiResponse<SupplierHealth>>('check_supplier_health', {
         supplierId
       })
-      return result.data
+      return result.data!
     } catch (error) {
       console.error('健康检查失败:', error)
       throw error
@@ -181,7 +183,7 @@ class SupplierApiService {
   // 检查所有供应商健康状态
   async checkAllSuppliersHealth(): Promise<SupplierHealth[]> {
     try {
-      const result = await (window.__TAURI__ as any).invoke('check_all_suppliers_health')
+      const result = await TauriHelper.invokeTauri<ApiResponse<SupplierHealth[]>>('check_all_suppliers_health')
       return result.data || []
     } catch (error) {
       console.error('批量健康检查失败:', error)
@@ -192,8 +194,8 @@ class SupplierApiService {
   // 执行供应商切换
   async switchSupplier(request: SupplierSwitchRequest): Promise<SupplierSwitchResult> {
     try {
-      const result = await (window.__TAURI__ as any).invoke('switch_supplier', request)
-      return result.data
+      const result = await TauriHelper.invokeTauri<ApiResponse<SupplierSwitchResult>>('switch_supplier', request)
+      return result.data!
     } catch (error) {
       console.error('供应商切换失败:', error)
       throw error
@@ -203,10 +205,10 @@ class SupplierApiService {
   // 执行自动故障转移
   async autoFailover(supplierType: string): Promise<SupplierSwitchResult> {
     try {
-      const result = await (window.__TAURI__ as any).invoke('auto_failover', {
+      const result = await TauriHelper.invokeTauri<ApiResponse<SupplierSwitchResult>>('auto_failover', {
         supplierType
       })
-      return result.data
+      return result.data!
     } catch (error) {
       console.error('自动故障转移失败:', error)
       throw error
@@ -216,10 +218,10 @@ class SupplierApiService {
   // 获取故障转移配置
   async getFailoverConfig(supplierType: string): Promise<FailoverConfig> {
     try {
-      const result = await (window.__TAURI__ as any).invoke('get_failover_config', {
+      const result = await TauriHelper.invokeTauri<ApiResponse<FailoverConfig>>('get_failover_config', {
         supplierType
       })
-      return result.data
+      return result.data!
     } catch (error) {
       console.error('获取故障转移配置失败:', error)
       throw error
@@ -229,11 +231,11 @@ class SupplierApiService {
   // 更新故障转移配置
   async updateFailoverConfig(supplierType: string, config: FailoverConfig): Promise<boolean> {
     try {
-      const result = await (window.__TAURI__ as any).invoke('update_failover_config', {
+      const result = await TauriHelper.invokeTauri<ApiResponse<boolean>>('update_failover_config', {
         supplierType,
         config
       })
-      return result.data
+      return result.success && !!result.data
     } catch (error) {
       console.error('更新故障转移配置失败:', error)
       throw error
@@ -243,7 +245,7 @@ class SupplierApiService {
   // 获取供应商切换进度
   async getSupplierSwitchProgress(switchId: string): Promise<SupplierSwitchProgress | null> {
     try {
-      const result = await (window.__TAURI__ as any).invoke('get_supplier_switch_progress', {
+      const result = await TauriHelper.invokeTauri<ApiResponse<SupplierSwitchProgress>>('get_supplier_switch_progress', {
         switchId
       })
       return result.data || null

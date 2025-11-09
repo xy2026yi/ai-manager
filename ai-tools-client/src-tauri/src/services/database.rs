@@ -1,7 +1,7 @@
 use anyhow::Result;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-use sqlx::SqlitePool;
-use std::collections::HashMap;
+use sqlx::{Row, SqlitePool};
+use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
 pub struct Database {
@@ -38,10 +38,21 @@ impl Database {
                 type TEXT NOT NULL,
                 name TEXT NOT NULL,
                 base_url TEXT NOT NULL,
-                api_key TEXT,
-                max_tokens TEXT,
-                temperature TEXT,
+                auth_token TEXT NOT NULL DEFAULT '',
+                timeout_ms INTEGER,
+                auto_update INTEGER DEFAULT 0,
+                opus_model TEXT,
+                sonnet_model TEXT,
+                haiku_model TEXT,
                 is_active INTEGER DEFAULT 0,
+                sort_order INTEGER DEFAULT 0,
+                is_healthy INTEGER DEFAULT 1,
+                last_check_time DATETIME,
+                response_time INTEGER,
+                consecutive_failures INTEGER DEFAULT 0,
+                uptime_percentage REAL DEFAULT 100.0,
+                total_requests INTEGER DEFAULT 0,
+                failed_requests INTEGER DEFAULT 0,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
@@ -49,6 +60,7 @@ impl Database {
         )
         .execute(pool)
         .await?;
+        Self::ensure_suppliers_schema(pool).await?;
 
         // 创建mcp_templates表
         sqlx::query(
@@ -122,6 +134,43 @@ impl Database {
         )
         .execute(pool)
         .await?;
+
+        Ok(())
+    }
+
+    async fn ensure_suppliers_schema(pool: &SqlitePool) -> Result<()> {
+        let rows = sqlx::query("PRAGMA table_info('suppliers')")
+            .fetch_all(pool)
+            .await?;
+
+        let existing: HashSet<String> = rows
+            .into_iter()
+            .map(|row| row.get::<String, _>("name"))
+            .collect();
+
+        let required = [
+            ("auth_token", "TEXT NOT NULL DEFAULT ''"),
+            ("timeout_ms", "INTEGER"),
+            ("auto_update", "INTEGER DEFAULT 0"),
+            ("opus_model", "TEXT"),
+            ("sonnet_model", "TEXT"),
+            ("haiku_model", "TEXT"),
+            ("sort_order", "INTEGER DEFAULT 0"),
+            ("is_healthy", "INTEGER DEFAULT 1"),
+            ("last_check_time", "DATETIME"),
+            ("response_time", "INTEGER"),
+            ("consecutive_failures", "INTEGER DEFAULT 0"),
+            ("uptime_percentage", "REAL DEFAULT 100.0"),
+            ("total_requests", "INTEGER DEFAULT 0"),
+            ("failed_requests", "INTEGER DEFAULT 0"),
+        ];
+
+        for (name, definition) in required {
+            if !existing.contains(name) {
+                let sql = format!("ALTER TABLE suppliers ADD COLUMN {} {}", name, definition);
+                sqlx::query(&sql).execute(pool).await?;
+            }
+        }
 
         Ok(())
     }

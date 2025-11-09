@@ -5,11 +5,13 @@ import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 import { visualizer } from 'rollup-plugin-visualizer'
 
+const isDev = process.env.NODE_ENV !== 'production'
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     vue(),
-    vueDevTools(),
+    ...(isDev ? [vueDevTools()] : []),
     visualizer({
       open: false,
       gzipSize: true,
@@ -23,7 +25,8 @@ export default defineConfig({
     },
   },
   build: {
-    target: 'esnext',
+    target: ['es2020', 'chrome100', 'safari15'],
+    cssTarget: 'chrome100',
     minify: 'terser',
     rollupOptions: {
       output: {

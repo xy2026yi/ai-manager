@@ -307,20 +307,31 @@ mod tests {
     use super::*;
     use crate::services::database::Database;
     use sqlx::SqlitePool;
-    use tempfile::tempdir;
+    use tempfile::{tempdir, TempDir};
 
-    async fn create_test_pool() -> SqlitePool {
+    struct TestDb {
+        _dir: TempDir,
+        pool: SqlitePool,
+    }
+
+    async fn create_test_pool() -> TestDb {
         let temp_dir = tempdir().unwrap();
         let db_path = temp_dir.path().join("test.db");
         let db_url = format!("sqlite://{}", db_path.to_string_lossy());
 
         Database::new(&db_url).await.unwrap();
-        SqlitePool::connect(&db_url).await.unwrap()
+        let pool = SqlitePool::connect(&db_url).await.unwrap();
+
+        TestDb {
+            _dir: temp_dir,
+            pool,
+        }
     }
 
     #[tokio::test]
     async fn test_app_state() {
-        let pool = create_test_pool().await;
+        let test_db = create_test_pool().await;
+        let pool = &test_db.pool;
 
         // 测试设置和获取应用状态
         let state = AppState::set(&pool, "test_key", "test_value")
@@ -346,7 +357,18 @@ mod tests {
 
     #[tokio::test]
     async fn test_work_mode_config() {
-        let pool = create_test_pool().await;
+        let test_db = create_test_pool().await;
+        let pool = &test_db.pool;
+
+        sqlx::query(
+            r#"
+            INSERT INTO suppliers (type, name, base_url, auth_token, is_active, created_at, updated_at)
+            VALUES ('claude', 'Test Supplier', 'https://api.example.com', 'token', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            "#,
+        )
+        .execute(pool)
+        .await
+        .unwrap();
 
         let request = UpdateWorkModeRequest {
             mode_name: "claude_only".to_string(),
@@ -369,7 +391,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_config_history() {
-        let pool = create_test_pool().await;
+        let test_db = create_test_pool().await;
+        let pool = &test_db.pool;
 
         let history = ConfigHistory::create(
             &pool,
