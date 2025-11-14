@@ -1,0 +1,22 @@
+/* 测试 Tailwind 样式的文件 */
+
+/* 这个类用于测试 Tailwind 是否正常工作 */
+.text-blue-500 {
+  color: #3b82f6;
+}
+
+/* 测试动画效果 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
