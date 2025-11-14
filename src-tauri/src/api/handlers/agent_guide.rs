@@ -5,6 +5,7 @@
 use axum::{
     extract::{Path, Query, State},
     response::Json,
+    Router,
 };
 use serde::Deserialize;
 use tracing::{info, warn, error};
@@ -16,8 +17,8 @@ use crate::repositories::{AgentGuideRepository, BaseRepository};
 use crate::database::DatabaseManager;
 use crate::crypto::CryptoService;
 
-/// 重用Claude供应商的ApiState
-pub use super::claude::ApiState;
+/// 重用API服务器的ApiState
+pub use super::super::server::ApiState;
 
 /// 查询参数
 #[derive(Debug, Deserialize)]
@@ -484,4 +485,25 @@ pub async fn get_agent_guide_stats(
         stats,
         "获取Agent指导文件统计信息成功".to_string()
     )))
+}
+
+/// Agent指导文件API路由
+pub fn routes() -> Router<ApiState> {
+    use axum::routing::{get, post, delete, put};
+
+    Router::new()
+        // 创建Agent指导文件
+        .route("/", post(create_agent_guide))
+        // 获取Agent指导文件列表
+        .route("/", get(list_agent_guides))
+        // 获取Agent指导文件统计信息
+        .route("/stats", get(get_agent_guide_stats))
+        // 获取单个Agent指导文件
+        .route("/:id", get(get_agent_guide))
+        // 更新Agent指导文件
+        .route("/:id", put(update_agent_guide))
+        // 删除Agent指导文件
+        .route("/:id", delete(delete_agent_guide))
+        // 验证Agent指导文件内容
+        .route("/:id/validate", get(validate_agent_guide))
 }

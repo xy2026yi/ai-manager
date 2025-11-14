@@ -17,14 +17,15 @@ use tower_http::{
     trace::TraceLayer,
 };
 use crate::api::error::ApiError;
-use crate::api::handlers::claude;
-use crate::api::handlers::codex;
+use crate::api::handlers::{claude, codex, agent_guide, mcp_server, common_config};
 use crate::database::DatabaseManager;
 use crate::crypto::CryptoService;
 
 /// 统一的API状态
 #[derive(Clone)]
 pub struct ApiState {
+    pub db_manager: std::sync::Arc<DatabaseManager>,
+    pub crypto_service: std::sync::Arc<CryptoService>,
     pub claude_service: crate::services::claude_service::ClaudeProviderService,
     pub codex_service: crate::services::codex_service::CodexProviderService,
 }
@@ -78,6 +79,8 @@ impl ApiServer {
 
         // 创建API状态
         let api_state = ApiState {
+            db_manager: db_manager.clone(),
+            crypto_service: crypto_service.clone(),
             claude_service: crate::services::claude_service::ClaudeProviderService::new(db_manager.clone(), crypto_service.clone()),
             codex_service: crate::services::codex_service::CodexProviderService::new(db_manager, crypto_service),
         };
@@ -97,6 +100,12 @@ impl ApiServer {
             .nest("/api/v1/claude-providers", claude::routes())
             // Codex供应商管理路由
             .nest("/api/v1/codex-providers", codex::routes())
+            // Agent指导文件管理路由
+            .nest("/api/v1/agent-guides", agent_guide::routes())
+            // MCP服务器管理路由
+            .nest("/api/v1/mcp-servers", mcp_server::routes())
+            // 通用配置管理路由
+            .nest("/api/v1/common-configs", common_config::routes())
             .with_state(api_state)
             // 404处理
             .fallback(handle_404);

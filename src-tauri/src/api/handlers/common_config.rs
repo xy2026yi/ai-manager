@@ -5,6 +5,7 @@
 use axum::{
     extract::{Path, Query, State},
     response::Json,
+    Router,
 };
 use serde::Deserialize;
 use tracing::{info, warn, error};
@@ -16,8 +17,8 @@ use crate::repositories::{CommonConfigRepository, BaseRepository};
 use crate::database::DatabaseManager;
 use crate::crypto::CryptoService;
 
-/// 重用Claude供应商的ApiState
-pub use super::claude::ApiState;
+/// 重用API服务器的ApiState
+pub use super::super::server::ApiState;
 
 /// 查询参数
 #[derive(Debug, Deserialize)]
@@ -653,4 +654,29 @@ pub async fn get_common_config_stats(
         stats,
         "获取通用配置统计信息成功".to_string()
     )))
+}
+
+/// 通用配置API路由
+pub fn routes() -> Router<ApiState> {
+    use axum::routing::{get, post, delete, put};
+
+    Router::new()
+        // 创建通用配置
+        .route("/", post(create_common_config))
+        // 获取通用配置列表
+        .route("/", get(list_common_configs))
+        // 批量更新通用配置
+        .route("/batch", post(batch_update_common_configs))
+        // 获取通用配置统计信息
+        .route("/stats", get(get_common_config_stats))
+        // 获取单个通用配置
+        .route("/:id", get(get_common_config))
+        // 更新通用配置
+        .route("/:id", put(update_common_config))
+        // 删除通用配置
+        .route("/:id", delete(delete_common_config))
+        // 验证通用配置值
+        .route("/:id/validate", get(validate_common_config))
+        // 根据key获取配置
+        .route("/key/:key", get(get_common_config_by_key))
 }

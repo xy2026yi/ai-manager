@@ -5,6 +5,7 @@
 use axum::{
     extract::{Path, Query, State},
     response::Json,
+    Router,
 };
 use serde::Deserialize;
 use tracing::{info, warn, error};
@@ -16,8 +17,8 @@ use crate::repositories::{McpServerRepository, BaseRepository};
 use crate::database::DatabaseManager;
 use crate::crypto::CryptoService;
 
-/// 重用Claude供应商的ApiState
-pub use super::claude::ApiState;
+/// 重用API服务器的ApiState
+pub use super::super::server::ApiState;
 
 /// 查询参数
 #[derive(Debug, Deserialize)]
@@ -536,4 +537,25 @@ pub async fn get_mcp_server_stats(
         stats,
         "获取MCP服务器统计信息成功".to_string()
     )))
+}
+
+/// MCP服务器API路由
+pub fn routes() -> Router<ApiState> {
+    use axum::routing::{get, post, delete, put};
+
+    Router::new()
+        // 创建MCP服务器
+        .route("/", post(create_mcp_server))
+        // 获取MCP服务器列表
+        .route("/", get(list_mcp_servers))
+        // 获取MCP服务器统计信息
+        .route("/stats", get(get_mcp_server_stats))
+        // 获取单个MCP服务器
+        .route("/:id", get(get_mcp_server))
+        // 更新MCP服务器
+        .route("/:id", put(update_mcp_server))
+        // 删除MCP服务器
+        .route("/:id", delete(delete_mcp_server))
+        // 测试MCP服务器配置
+        .route("/:id/test", get(test_mcp_server))
 }
