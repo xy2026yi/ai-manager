@@ -143,8 +143,10 @@ async fn migrate_data(
 
     // 连接目标数据库
     info!("💾 连接目标数据库...");
+    let target_db;
     if dry_run {
         info!("🔍 预览模式：跳过目标数据库连接");
+        target_db = None;
     } else {
         // 创建目标数据库目录
         if let Some(parent) = Path::new(target_db_path).parent() {
@@ -160,8 +162,9 @@ async fn migrate_data(
             max_lifetime: std::time::Duration::from_secs(1800),
         };
 
-        let _target_db = DatabaseManager::new(target_config).await?;
+        let db = DatabaseManager::new(target_config).await?;
         info!("✅ 目标数据库连接成功");
+        target_db = Some(db);
     }
 
     // 获取加密密钥（这里使用固定的测试密钥，实际使用中应该从.env读取）
@@ -174,47 +177,63 @@ async fn migrate_data(
     info!("🔐 开始迁移数据...");
 
     // 迁移Claude供应商
-    migrated_data.claude_providers = migrate_claude_providers(
-        &source_pool,
-        &old_crypto,
-        &new_crypto,
-        dry_run
-    ).await.unwrap_or_else(|e| {
-        migrated_data.errors.push(format!("Claude供应商迁移失败: {}", e));
-        0
-    });
-
-    // 迁移Codex供应商
-    migrated_data.codex_providers = migrate_codex_providers(
-        &source_pool,
-        &old_crypto,
-        &new_crypto,
-        dry_run
-    ).await.unwrap_or_else(|e| {
-        migrated_data.errors.push(format!("Codex供应商迁移失败: {}", e));
-        0
-    });
-
-    // 迁移Agent指导文件
-    migrated_data.agent_guides = migrate_agent_guides(&source_pool, dry_run)
-        .await.unwrap_or_else(|e| {
-            migrated_data.errors.push(format!("Agent指导迁移失败: {}", e));
+    if let Some(ref db) = target_db {
+        migrated_data.claude_providers = migrate_claude_providers(
+            &source_pool,
+            db,
+            &old_crypto,
+            &new_crypto,
+            dry_run
+        ).await.unwrap_or_else(|e| {
+            migrated_data.errors.push(format!("Claude供应商迁移失败: {}", e));
             0
         });
 
-    // 迁移MCP服务器
-    migrated_data.mcp_servers = migrate_mcp_servers(&source_pool, dry_run)
-        .await.unwrap_or_else(|e| {
-            migrated_data.errors.push(format!("MCP服务器迁移失败: {}", e));
+        // 迁移Codex供应商
+        migrated_data.codex_providers = migrate_codex_providers(
+            &source_pool,
+            db,
+            &old_crypto,
+            &new_crypto,
+            dry_run
+        ).await.unwrap_or_else(|e| {
+            migrated_data.errors.push(format!("Codex供应商迁移失败: {}", e));
             0
         });
 
-    // 迁移通用配置
-    migrated_data.common_configs = migrate_common_configs(&source_pool, dry_run)
-        .await.unwrap_or_else(|e| {
-            migrated_data.errors.push(format!("通用配置迁移失败: {}", e));
-            0
-        });
+        // 迁移Agent指导文件
+        migrated_data.agent_guides = migrate_agent_guides(&source_pool, db, dry_run)
+            .await.unwrap_or_else(|e| {
+                migrated_data.errors.push(format!("Agent指导迁移失败: {}", e));
+                0
+            });
+
+        // 迁移MCP服务器
+        migrated_data.mcp_servers = migrate_mcp_servers(&source_pool, db, dry_run)
+            .await.unwrap_or_else(|e| {
+                migrated_data.errors.push(format!("MCP服务器迁移失败: {}", e));
+                0
+            });
+
+        // 迁移通用配置
+        migrated_data.common_configs = migrate_common_configs(&source_pool, db, dry_run)
+            .await.unwrap_or_else(|e| {
+                migrated_data.errors.push(format!("通用配置迁移失败: {}", e));
+                0
+            });
+    } else {
+        // 预览模式，只读取源数据数量
+        migrated_data.claude_providers = sqlx::query("SELECT COUNT(*) FROM claude_providers")
+            .fetch_one(&source_pool).await?.get::<i64, _>(0) as usize;
+        migrated_data.codex_providers = sqlx::query("SELECT COUNT(*) FROM codex_providers")
+            .fetch_one(&source_pool).await?.get::<i64, _>(0) as usize;
+        migrated_data.agent_guides = sqlx::query("SELECT COUNT(*) FROM agent_guides")
+            .fetch_one(&source_pool).await?.get::<i64, _>(0) as usize;
+        migrated_data.mcp_servers = sqlx::query("SELECT COUNT(*) FROM mcp_servers")
+            .fetch_one(&source_pool).await?.get::<i64, _>(0) as usize;
+        migrated_data.common_configs = sqlx::query("SELECT COUNT(*) FROM common_configs")
+            .fetch_one(&source_pool).await?.get::<i64, _>(0) as usize;
+    }
 
     Ok(migrated_data)
 }
@@ -239,6 +258,7 @@ fn get_new_encryption_key() -> String {
 
 async fn migrate_claude_providers(
     source_pool: &sqlx::SqlitePool,
+    target_db: &DatabaseManager,
     old_crypto: &CryptoService,
     new_crypto: &CryptoService,
     dry_run: bool,
@@ -254,7 +274,7 @@ async fn migrate_claude_providers(
     let mut count = 0;
     for row in rows {
         let name: String = row.get("name");
-        let url: String = row.get("url");
+        let _url: String = row.get("url");
         let encrypted_token: String = row.get("token");
 
         // 解密原始token
@@ -272,7 +292,23 @@ async fn migrate_claude_providers(
         info!("  ✅ Claude供应商: {}", name);
 
         if !dry_run {
-            // 插入到目标数据库（这里简化处理，实际应该在目标数据库中执行）
+            // 插入到目标数据库
+            sqlx::query(r#"
+                INSERT INTO claude_providers (name, url, token, timeout, auto_update, type, enabled, opus_model, sonnet_model, haiku_model)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            "#)
+            .bind(name.clone())
+            .bind(row.get::<Option<String>, _>("url").unwrap_or_else(|| "https://api.anthropic.com".to_string()))
+            .bind(new_encrypted_token)
+            .bind(row.get::<Option<i64>, _>("timeout").unwrap_or(30000))
+            .bind(row.get::<Option<i64>, _>("auto_update").unwrap_or(1))
+            .bind(row.get::<Option<String>, _>("type").unwrap_or_else(|| "public_welfare".to_string()))
+            .bind(row.get::<Option<i64>, _>("enabled").unwrap_or(0))
+            .bind(row.get::<Option<String>, _>("opus_model"))
+            .bind(row.get::<Option<String>, _>("sonnet_model"))
+            .bind(row.get::<Option<String>, _>("haiku_model"))
+            .execute(target_db.pool())
+            .await?;
             count += 1;
         } else {
             count += 1;
@@ -284,6 +320,7 @@ async fn migrate_claude_providers(
 
 async fn migrate_codex_providers(
     source_pool: &sqlx::SqlitePool,
+    target_db: &DatabaseManager,
     old_crypto: &CryptoService,
     new_crypto: &CryptoService,
     dry_run: bool,
@@ -309,10 +346,22 @@ async fn migrate_codex_providers(
             }
         };
 
-        let _new_encrypted_token = new_crypto.encrypt(&token)?;
+        let new_encrypted_token = new_crypto.encrypt(&token)?;
         info!("  ✅ Codex供应商: {}", name);
 
         if !dry_run {
+            // 插入到目标数据库
+            sqlx::query(r#"
+                INSERT INTO codex_providers (name, url, token, type, enabled)
+                VALUES (?, ?, ?, ?, ?)
+            "#)
+            .bind(name.clone())
+            .bind(row.get::<Option<String>, _>("url").unwrap_or_else(|| "https://api.openai.com".to_string()))
+            .bind(new_encrypted_token)
+            .bind(row.get::<Option<String>, _>("type").unwrap_or_else(|| "public_welfare".to_string()))
+            .bind(row.get::<Option<i64>, _>("enabled").unwrap_or(0))
+            .execute(target_db.pool())
+            .await?;
             count += 1;
         } else {
             count += 1;
@@ -324,6 +373,7 @@ async fn migrate_codex_providers(
 
 async fn migrate_agent_guides(
     source_pool: &sqlx::SqlitePool,
+    target_db: &DatabaseManager,
     dry_run: bool,
 ) -> Result<usize, Box<dyn std::error::Error>> {
     info!("🔄 迁移Agent指导文件...");
@@ -337,9 +387,22 @@ async fn migrate_agent_guides(
     let mut count = 0;
     for row in rows {
         let name: String = row.get("name");
+        let guide_type: String = row.get("type");
+        let text: String = row.get("text");
+
         info!("  ✅ Agent指导: {}", name);
 
         if !dry_run {
+            // 插入到目标数据库
+            sqlx::query(r#"
+                INSERT INTO agent_guides (name, type, text)
+                VALUES (?, ?, ?)
+            "#)
+            .bind(name.clone())
+            .bind(guide_type)
+            .bind(text)
+            .execute(target_db.pool())
+            .await?;
             count += 1;
         } else {
             count += 1;
@@ -351,6 +414,7 @@ async fn migrate_agent_guides(
 
 async fn migrate_mcp_servers(
     source_pool: &sqlx::SqlitePool,
+    target_db: &DatabaseManager,
     dry_run: bool,
 ) -> Result<usize, Box<dyn std::error::Error>> {
     info!("🔄 迁移MCP服务器...");
@@ -364,9 +428,28 @@ async fn migrate_mcp_servers(
     let mut count = 0;
     for row in rows {
         let name: String = row.get("name");
+        let server_type: Option<String> = row.get("type");
+        let timeout: Option<i64> = row.get("timeout");
+        let command: String = row.get("command");
+        let args: String = row.get("args");
+        let env: Option<String> = row.get("env");
+
         info!("  ✅ MCP服务器: {}", name);
 
         if !dry_run {
+            // 插入到目标数据库
+            sqlx::query(r#"
+                INSERT INTO mcp_servers (name, type, timeout, command, args, env)
+                VALUES (?, ?, ?, ?, ?, ?)
+            "#)
+            .bind(name.clone())
+            .bind(server_type)
+            .bind(timeout.unwrap_or(30000))
+            .bind(command)
+            .bind(args)
+            .bind(env)
+            .execute(target_db.pool())
+            .await?;
             count += 1;
         } else {
             count += 1;
@@ -378,6 +461,7 @@ async fn migrate_mcp_servers(
 
 async fn migrate_common_configs(
     source_pool: &sqlx::SqlitePool,
+    target_db: &DatabaseManager,
     dry_run: bool,
 ) -> Result<usize, Box<dyn std::error::Error>> {
     info!("🔄 迁移通用配置...");
@@ -391,9 +475,26 @@ async fn migrate_common_configs(
     let mut count = 0;
     for row in rows {
         let key: String = row.get("key");
+        let value: String = row.get("value");
+        let description: Option<String> = row.get("description");
+        let category: Option<String> = row.get("category");
+        let is_active: Option<i64> = row.get("is_active");
+
         info!("  ✅ 配置项: {}", key);
 
         if !dry_run {
+            // 插入到目标数据库
+            sqlx::query(r#"
+                INSERT INTO common_configs (key, value, description, category, is_active)
+                VALUES (?, ?, ?, ?, ?)
+            "#)
+            .bind(key.clone())
+            .bind(value)
+            .bind(description)
+            .bind(category.unwrap_or_else(|| "general".to_string()))
+            .bind(is_active.unwrap_or(1))
+            .execute(target_db.pool())
+            .await?;
             count += 1;
         } else {
             count += 1;
