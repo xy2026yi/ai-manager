@@ -2,6 +2,9 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod test_deps;
+mod models;
+mod crypto;
+mod python_compatibility_test;
 
 // Tauri 基础命令
 #[tauri::command]
