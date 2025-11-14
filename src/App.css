@@ -1,11 +1,11 @@
-/* 测试 Tailwind 样式的文件 */
+/* 测试 Tailwind 样式和自定义动画的文件 */
 
 /* 这个类用于测试 Tailwind 是否正常工作 */
 .text-blue-500 {
   color: #3b82f6;
 }
 
-/* 测试动画效果 */
+/* 自定义动画 */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -19,4 +19,18 @@
 
 .fade-in {
   animation: fadeIn 0.5s ease-out;
+}
+
+/* Tailwind 动画类增强 */
+.animate-spin-slow {
+  animation: spin 3s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }

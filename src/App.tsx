@@ -1,6 +1,6 @@
 import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/vite.svg";
+// import reactLogo from "./assets/react.svg";
+// import viteLogo from "/vite.svg";
 import "./App.css";
 
 function App() {
@@ -19,8 +19,8 @@ function App() {
 
           <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
             <div className="flex justify-center space-x-4 mb-6">
-              <img src={viteLogo} className="h-16 animate-spin" alt="Vite logo" />
-              <img src={reactLogo} className="h-16 animate-bounce" alt="React logo" />
+              <div className="h-16 w-16 bg-blue-500 rounded-full animate-spin flex items-center justify-center text-white font-bold">V</div>
+              <div className="h-16 w-16 bg-cyan-500 rounded-full animate-bounce flex items-center justify-center text-white font-bold">R</div>
             </div>
 
             <h2 className="text-2xl font-semibold text-center mb-4">开发环境测试</h2>
