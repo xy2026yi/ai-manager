@@ -18,6 +18,7 @@ pub enum CryptoError {
 }
 
 /// 加密服务结构体
+#[derive(Clone)]
 pub struct CryptoService {
     fernet: Fernet,
 }
