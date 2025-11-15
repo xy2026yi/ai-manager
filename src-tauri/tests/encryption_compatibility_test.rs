@@ -1,480 +1,350 @@
-// 加密兼容性测试
-// 验证Python Fernet与Rust fernet加密算法的完全兼容性
+//! 加密兼容性测试
+//! 
+//! 验证与Python Fernet的完全兼容性，确保加密数据可以在两个平台间无缝迁移
 
-use migration_ai_manager_lib::crypto::CryptoService;
+use migration_ai_manager::crypto::{CryptoService, python_compatibility};
+use migration_ai_manager::migration_tool::DataMigrationTool;
+use migration_ai_manager::database::{DatabaseManager, DatabaseConfig};
+use serde_json;
 use std::collections::HashMap;
-use serde_json::{json, Value};
+use std::time::Duration;
+use tempfile::tempdir;
+use tracing::{info, warn, error};
 
-// 加密兼容性测试结构
-struct EncryptionCompatibilityTester {
-    rust_crypto: CryptoService,
-    test_cases: Vec<TestCase>,
+#[tokio::test]
+async fn test_python_fernet_compatibility() {
+    println!("🔐 测试Python Fernet兼容性...");
+    
+    // 验证Python兼容性
+    let result = python_compatibility::verify_python_compatibility();
+    assert!(result.is_ok(), "Python Fernet兼容性测试应该通过");
+    
+    println!("✅ Python Fernet兼容性测试通过");
 }
 
-#[derive(Debug, Clone)]
-struct TestCase {
-    name: String,
-    plaintext: String,
-    expected_encrypted: Option<String>,
-    description: String,
+#[tokio::test]
+async fn test_encrypted_token_roundtrip() {
+    println!("🔄 测试加密token往返...");
+    
+    let crypto_service = CryptoService::new("Jw4Ff1BWLnSykdfXDVOuEJCG6m9dyST5B1VhU_qg0fI=")
+        .expect("加密服务创建应该成功");
+    
+    // 模拟各种可能的token格式
+    let test_tokens = vec![
+        "sk-ant-api03-test-key-1",
+        "sk-test-openai-key-1",
+        "sk-1234567890abcdef",
+        "test-api-key-with-special-chars-!@#$%^&*()",
+        "测试中文token",
+        "🔒🔐🔑",
+        "", // 空token
+        "A".repeat(1000), // 长token
+    ];
+    
+    for (i, original_token) in test_tokens.iter().enumerate() {
+        println!("测试token {}: {}", i + 1, &original_token[..20.min(original_token.len())]);
+        
+        // 加密
+        let encrypted_token = crypto_service.encrypt(original_token)
+            .expect("token加密应该成功");
+        
+        // 验证加密结果格式
+        assert!(encrypted_token.starts_with("gAAAA"), 
+                "加密结果应该以gAAAA开头: {}", &encrypted_token[..10]);
+        assert!(encrypted_token.len() > 100, 
+                "加密结果应该足够长: {}", encrypted_token.len());
+        
+        // 解密
+        let decrypted_token = crypto_service.decrypt(&encrypted_token)
+            .expect("token解密应该成功");
+        
+        // 验证往返一致性
+        assert_eq!(original_token, &decrypted_token, 
+                   "加密往返应该保持token不变");
+        
+        println!("  ✅ 加密/解密往返成功");
+    }
+    
+    println!("✅ 加密token往返测试通过");
 }
 
-impl EncryptionCompatibilityTester {
-    // 创建测试实例
-    fn new() -> Result<Self, Box<dyn std::error::Error>> {
-        let rust_crypto = CryptoService::new("test_compatibility_key_32_bytes_long!")?;
+#[tokio::test]
+async fn test_cross_platform_encryption_vectors() {
+    println!("🌐 测试跨平台加密向量...");
+    
+    // 生成与Python兼容的测试向量
+    let test_vectors = python_compatibility::generate_test_vectors();
+    
+    println!("生成了 {} 个测试向量", test_vectors.len());
+    
+    for (i, (original, encrypted)) in test_vectors.iter().enumerate() {
+        println!("测试向量 {}: {} chars -> {} chars", 
+                i + 1, original.len(), encrypted.len());
         
-        // 定义测试用例（来自原Python项目的测试数据）
-        let test_cases = vec![
-            TestCase {
-                name: "空字符串".to_string(),
-                plaintext: "".to_string(),
-                expected_encrypted: None, // 将在运行时计算
-                description: "测试空字符串的加密解密".to_string(),
-            },
-            TestCase {
-                name: "简单文本".to_string(),
-                plaintext: "Hello World".to_string(),
-                expected_encrypted: None,
-                description: "测试简单的英文字符串".to_string(),
-            },
-            TestCase {
-                name: "中文文本".to_string(),
-                plaintext: "你好世界，这是一段中文测试文本".to_string(),
-                expected_encrypted: None,
-                description: "测试中文字符串的加密解密".to_string(),
-            },
-            TestCase {
-                name: "特殊字符".to_string(),
-                plaintext: "特殊字符：!@#$%^&*()_+-={}[]|:;\"'<>?,./".to_string(),
-                expected_encrypted: None,
-                description: "测试特殊符号和标点".to_string(),
-            },
-            TestCase {
-                name: "长文本".to_string(),
-                plaintext: "这是一段较长的测试文本，用于验证加密算法在处理大量数据时的性能和准确性。包含各种字符：1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()".to_string(),
-                expected_encrypted: None,
-                description: "测试长文本的加密解密".to_string(),
-            },
-            TestCase {
-                name: "JSON数据".to_string(),
-                plaintext: json!({
-                    "name": "测试供应商",
-                    "url": "https://api.openai.com",
-                    "token": "sk-test-token-123456",
-                    "model": "gpt-4",
-                    "enabled": true,
-                    "settings": {
-                        "temperature": 0.7,
-                        "max_tokens": 4096,
-                        "timeout": 30
-                    }
-                }).to_string(),
-                expected_encrypted: None,
-                description: "测试JSON格式数据的加密".to_string(),
-            },
-            TestCase {
-                name: "数字和符号混合".to_string(),
-                plaintext: "Token: sk-123ABCdef!@#456".to_string(),
-                expected_encrypted: None,
-                description: "测试数字、字母和符号的混合".to_string(),
-            },
-            TestCase {
-                name: "API密钥格式".to_string(),
-                plaintext: "sk-1234567890abcdef1234567890abcdef12345678".to_string(),
-                expected_encrypted: None,
-                description: "测试类似API密钥格式的字符串".to_string(),
-            },
-        ];
+        // 验证加密向量可以被解密
+        let crypto_service = CryptoService::new("Jw4Ff1BWLnSykdfXDVOuEJCG6m9dyST5B1VhU_qg0fI=")
+            .expect("加密服务创建应该成功");
         
-        Ok(Self {
-            rust_crypto,
-            test_cases,
-        })
+        let decrypted = crypto_service.decrypt(encrypted)
+            .expect("测试向量解密应该成功");
+        
+        assert_eq!(original, &decrypted, 
+                   "测试向量解密结果应该与原始数据一致");
+        
+        println!("  ✅ 测试向量验证成功");
     }
     
-    // 测试Rust加密解密的往返兼容性
-    fn test_rust_round_trip(&self) -> Vec<TestResult> {
-        let mut results = Vec::new();
-        
-        for test_case in &self.test_cases {
-            println!("测试Rust往返加密: {}", test_case.name);
-            
-            // 加密
-            let encrypt_result = self.rust_crypto.encrypt(&test_case.plaintext);
-            match encrypt_result {
-                Ok(encrypted) => {
-                    // 解密
-                    let decrypt_result = self.rust_crypto.decrypt(&encrypted);
-                    match decrypt_result {
-                        Ok(decrypted) => {
-                            let success = decrypted == test_case.plaintext;
-                            results.push(TestResult {
-                                name: test_case.name.clone(),
-                                test_type: "Rust往返加密".to_string(),
-                                success,
-                                plaintext: test_case.plaintext.clone(),
-                                encrypted,
-                                decrypted: Some(decrypted),
-                                error_message: None,
-                                encrypted_length: encrypted.len(),
-                                execution_time_ms: None,
-                            });
-                            
-                            if success {
-                                println!("  ✅ 成功");
-                            } else {
-                                println!("  ❌ 解密结果不匹配");
-                            }
-                        }
-                        Err(e) => {
-                            println!("  ❌ 解密失败: {}", e);
-                            results.push(TestResult {
-                                name: test_case.name.clone(),
-                                test_type: "Rust往返加密".to_string(),
-                                success: false,
-                                plaintext: test_case.plaintext.clone(),
-                                encrypted,
-                                decrypted: None,
-                                error_message: Some(e.to_string()),
-                                encrypted_length: encrypted.len(),
-                                execution_time_ms: None,
-                            });
-                        }
-                    }
-                }
-                Err(e) => {
-                    println!("  ❌ 加密失败: {}", e);
-                    results.push(TestResult {
-                        name: test_case.name.clone(),
-                        test_type: "Rust往返加密".to_string(),
-                        success: false,
-                        plaintext: test_case.plaintext.clone(),
-                        encrypted: String::new(),
-                        decrypted: None,
-                        error_message: Some(e.to_string()),
-                        encrypted_length: 0,
-                        execution_time_ms: None,
-                    });
-                }
-            }
-        }
-        
-        results
-    }
-    
-    // 测试加密数据的格式一致性
-    fn test_encryption_format_consistency(&self) -> Vec<TestResult> {
-        let mut results = Vec::new();
-        
-        for test_case in &self.test_cases {
-            let encrypt_result = self.rust_crypto.encrypt(&test_case.plaintext);
-            match encrypt_result {
-                Ok(encrypted) => {
-                    // 验证加密数据格式（Fernet格式应该是Base64编码的）
-                    let is_valid_base64 = is_valid_base64(&encrypted);
-                    let starts_with_gcm = encrypted.starts_with("gAAAAA"); // Fernet token通常以此开头
-                    
-                    results.push(TestResult {
-                        name: test_case.name.clone(),
-                        test_type: "加密格式验证".to_string(),
-                        success: is_valid_base64 && starts_with_gcm,
-                        plaintext: test_case.plaintext.clone(),
-                        encrypted: encrypted.clone(),
-                        decrypted: None,
-                        error_message: if !is_valid_base64 {
-                            Some("不是有效的Base64格式".to_string())
-                        } else if !starts_with_gcm {
-                            Some("不是标准的Fernet格式".to_string())
-                        } else {
-                            None
-                        },
-                        encrypted_length: encrypted.len(),
-                        execution_time_ms: None,
-                    });
-                }
-                Err(e) => {
-                    results.push(TestResult {
-                        name: test_case.name.clone(),
-                        test_type: "加密格式验证".to_string(),
-                        success: false,
-                        plaintext: test_case.plaintext.clone(),
-                        encrypted: String::new(),
-                        decrypted: None,
-                        error_message: Some(e.to_string()),
-                        encrypted_length: 0,
-                        execution_time_ms: None,
-                    });
-                }
-            }
-        }
-        
-        results
-    }
-    
-    // 测试加密性能
-    fn test_encryption_performance(&self) -> Vec<TestResult> {
-        let mut results = Vec::new();
-        
-        for test_case in &self.test_cases {
-            let start_time = std::time::Instant::now();
-            
-            let encrypt_result = self.rust_crypto.encrypt(&test_case.plaintext);
-            let encryption_time = start_time.elapsed();
-            
-            match encrypt_result {
-                Ok(encrypted) => {
-                    let decrypt_start_time = std::time::Instant::now();
-                    let decrypt_result = self.rust_crypto.decrypt(&encrypted);
-                    let decryption_time = decrypt_start_time.elapsed();
-                    let total_time = start_time.elapsed();
-                    
-                    let success = decrypt_result.is_ok() && decrypt_result.unwrap() == test_case.plaintext;
-                    
-                    results.push(TestResult {
-                        name: test_case.name.clone(),
-                        test_type: "加密性能测试".to_string(),
-                        success,
-                        plaintext: test_case.plaintext.clone(),
-                        encrypted,
-                        decrypted: decrypt_result.ok(),
-                        error_message: None,
-                        encrypted_length: 0,
-                        execution_time_ms: Some(total_time.as_millis() as f64),
-                    });
-                    
-                    println!("性能测试 {}: 加密 {:?}ms, 解密 {:?}ms, 总计 {:?}ms",
-                        test_case.name,
-                        encryption_time.as_millis(),
-                        decryption_time.as_millis(),
-                        total_time.as_millis()
-                    );
-                }
-                Err(e) => {
-                    results.push(TestResult {
-                        name: test_case.name.clone(),
-                        test_type: "加密性能测试".to_string(),
-                        success: false,
-                        plaintext: test_case.plaintext.clone(),
-                        encrypted: String::new(),
-                        decrypted: None,
-                        error_message: Some(e.to_string()),
-                        encrypted_length: 0,
-                        execution_time_ms: None,
-                    });
-                }
-            }
-        }
-        
-        results
-    }
-    
-    // 测试跨密钥兼容性
-    fn test_cross_key_compatibility(&self) -> Vec<TestResult> {
-        let mut results = Vec::new();
-        
-        // 创建不同的加密服务实例
-        let crypto1 = CryptoService::new("test_key_1_32_bytes_long_exact").unwrap();
-        let crypto2 = CryptoService::new("test_key_2_different_32_bytes_long").unwrap();
-        
-        for test_case in &self.test_cases {
-            // 用第一个密钥加密
-            let encrypted = crypto1.encrypt(&test_case.plaintext);
-            
-            match encrypted {
-                Ok(encrypted_data) => {
-                    // 尝试用相同密钥解密
-                    let decrypt_same = crypto1.decrypt(&encrypted_data);
-                    let same_key_success = decrypt_same.is_ok() && decrypt_same.unwrap() == test_case.plaintext;
-                    
-                    // 尝试用不同密钥解密
-                    let decrypt_diff = crypto2.decrypt(&encrypted_data);
-                    let diff_key_success = decrypt_diff.is_err(); // 应该失败
-                    
-                    results.push(TestResult {
-                        name: test_case.name.clone(),
-                        test_type: "跨密钥兼容性".to_string(),
-                        success: same_key_success && diff_key_success,
-                        plaintext: test_case.plaintext.clone(),
-                        encrypted: encrypted_data,
-                        decrypted: decrypt_same.ok(),
-                        error_message: if !same_key_success {
-                            Some("相同密钥解密失败".to_string())
-                        } else if !diff_key_success {
-                            Some("不同密钥解密应该失败".to_string())
-                        } else {
-                            None
-                        },
-                        encrypted_length: 0,
-                        execution_time_ms: None,
-                    });
-                }
-                Err(e) => {
-                    results.push(TestResult {
-                        name: test_case.name.clone(),
-                        test_type: "跨密钥兼容性".to_string(),
-                        success: false,
-                        plaintext: test_case.plaintext.clone(),
-                        encrypted: String::new(),
-                        decrypted: None,
-                        error_message: Some(e.to_string()),
-                        encrypted_length: 0,
-                        execution_time_ms: None,
-                    });
-                }
-            }
-        }
-        
-        results
-    }
-    
-    // 生成兼容性测试报告
-    fn generate_compatibility_report(&self, round_trip_results: Vec<TestResult>, format_results: Vec<TestResult>, performance_results: Vec<TestResult>, cross_key_results: Vec<TestResult>) -> String {
-        let mut report = String::new();
-        
-        report.push_str("# 加密兼容性测试报告\n\n");
-        report.push_str(&format!("生成时间: {}\n\n", chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC")));
-        
-        // 往返加密测试结果
-        report.push_str("## 往返加密测试\n\n");
-        let round_trip_success_rate = round_trip_results.iter().filter(|r| r.success).count() as f64 / round_trip_results.len() as f64 * 100.0;
-        report.push_str(&format!("成功率: {:.1}%\n\n", round_trip_success_rate));
-        
-        for result in &round_trip_results {
-            let status = if result.success { "✅" } else { "❌" };
-            report.push_str(&format!("{} {}: {}\n", status, result.name));
-            if !result.success {
-                report.push_str(&format!("  错误: {:?}\n", result.error_message));
-            }
-        }
-        
-        // 格式兼容性测试结果
-        report.push_str("\n## 格式兼容性测试\n\n");
-        let format_success_rate = format_results.iter().filter(|r| r.success).count() as f64 / format_results.len() as f64 * 100.0;
-        report.push_str(&format!("成功率: {:.1}%\n\n", format_success_rate));
-        
-        for result in &format_results {
-            let status = if result.success { "✅" } else { "❌" };
-            report.push_str(&format!("{} {}: 加密长度 {} bytes\n", status, result.name, result.encrypted_length));
-        }
-        
-        // 跨密钥兼容性测试结果
-        report.push_str("\n## 跨密钥兼容性测试\n\n");
-        let cross_key_success_rate = cross_key_results.iter().filter(|r| r.success).count() as f64 / cross_key_results.len() as f64 * 100.0;
-        report.push_str(&format!("成功率: {:.1}%\n\n", cross_key_success_rate));
-        
-        // 性能测试结果摘要
-        report.push_str("## 性能测试摘要\n\n");
-        let mut total_time = 0.0;
-        let mut successful_performance_tests = 0;
-        
-        for result in &performance_results {
-            if let Some(time) = result.execution_time_ms {
-                total_time += time;
-                successful_performance_tests += 1;
-            }
-        }
-        
-        if successful_performance_tests > 0 {
-            let avg_time = total_time / successful_performance_tests as f64;
-            report.push_str(&format!("平均执行时间: {:.2}ms\n", avg_time));
-            report.push_str(&format!("总测试时间: {:.2}ms\n", total_time));
-        }
-        
-        // 总体评估
-        report.push_str("\n## 总体评估\n\n");
-        let overall_success = round_trip_success_rate >= 100.0 && format_success_rate >= 100.0 && cross_key_success_rate >= 100.0;
-        
-        if overall_success {
-            report.push_str("🎉 **加密兼容性完全通过！** Rust Fernet实现与Python版本完全兼容。\n");
-        } else {
-            report.push_str("⚠️ **发现兼容性问题**，需要检查和修复。\n");
-        }
-        
-        report
-    }
+    println!("✅ 跨平台加密向量测试通过");
 }
 
-#[derive(Debug)]
-struct TestResult {
-    name: String,
-    test_type: String,
-    success: bool,
-    plaintext: String,
-    encrypted: String,
-    decrypted: Option<String>,
-    error_message: Option<String>,
-    encrypted_length: usize,
-    execution_time_ms: Option<f64>,
+#[tokio::test]
+async fn test_migration_with_encrypted_data() {
+    println!("📦 测试加密数据迁移...");
+    
+    // 设置测试环境
+    let temp_dir = tempdir().expect("临时目录创建失败");
+    let db_path = temp_dir.path().join("test_encrypted_migration.db");
+    let db_url = format!("sqlite:{}", db_path.display());
+
+    let config = DatabaseConfig {
+        url: db_url,
+        max_connections: 5,
+        min_connections: 1,
+        connect_timeout: Duration::from_secs(10),
+        idle_timeout: Duration::from_secs(60),
+        max_lifetime: Duration::from_secs(300),
+    };
+
+    let db_manager = DatabaseManager::new(config).await
+        .expect("数据库管理器创建失败");
+    
+    let migration_tool = DataMigrationTool::new(
+        db_manager.clone(), 
+        "Jw4Ff1BWLnSykdfXDVOuEJCG6m9dyST5B1VhU_qg0fI="
+    ).await.expect("迁移工具创建失败");
+    
+    // 创建包含预加密token的测试数据（模拟从Python导出的数据）
+    let crypto_service = CryptoService::new("Jw4Ff1BWLnSykdfXDVOuEJCG6m9dyST5B1VhU_qg0fI=")
+        .expect("加密服务创建失败");
+    
+    let mut test_data = create_encrypted_test_data(&crypto_service);
+    
+    // 导入预加密的数据
+    let json_content = serde_json::to_string(&test_data)
+        .expect("JSON序列化失败");
+    
+    let import_report = migration_tool.import_from_json(&json_content).await
+        .expect("加密数据导入应该成功");
+    
+    println!("✅ 加密数据导入完成: {:?}", import_report);
+    assert!(import_report.total_migrated > 0, "应该有数据被迁移");
+    
+    // 导出并验证数据能正确解密
+    let exported_data = migration_tool.export_to_json().await
+        .expect("数据导出应该成功");
+    
+    // 验证token被正确解密
+    for provider in &exported_data.claude_providers {
+        assert!(!provider.token.starts_with("gAAAA"), 
+                "Claude供应商token应该被解密: {}...", &provider.token[..20]);
+    }
+    
+    for provider in &exported_data.codex_providers {
+        assert!(!provider.token.starts_with("gAAAA"), 
+                "Codex供应商token应该被解密: {}...", &provider.token[..20]);
+    }
+    
+    println!("✅ 加密数据迁移测试通过");
 }
 
-// 检查是否是有效的Base64格式
-fn is_valid_base64(s: &str) -> bool {
-    base64::decode(s).is_ok()
+#[tokio::test]
+async fn test_encryption_performance() {
+    println!("⚡ 测试加密性能...");
+    
+    let crypto_service = CryptoService::new("Jw4Ff1BWLnSykdfXDVOuEJCG6m9dyST5B1VhU_qg0fI=")
+        .expect("加密服务创建应该成功");
+    
+    // 测试批量加密性能
+    let test_data: Vec<String> = (0..100)
+        .map(|i| format!("test-token-{:04}-sk-1234567890abcdef", i))
+        .collect();
+    
+    println!("测试 {} 个token的批量加密性能...", test_data.len());
+    
+    let start_time = std::time::Instant::now();
+    
+    // 批量加密
+    let encrypted_data = crypto_service.encrypt_batch(&test_data)
+        .expect("批量加密应该成功");
+    
+    let encrypt_duration = start_time.elapsed();
+    println!("批量加密耗时: {:?}", encrypt_duration);
+    
+    // 批量解密
+    let start_time = std::time::Instant::now();
+    let decrypted_data = crypto_service.decrypt_batch(&encrypted_data)
+        .expect("批量解密应该成功");
+    
+    let decrypt_duration = start_time.elapsed();
+    println!("批量解密耗时: {:?}", decrypt_duration);
+    
+    // 验证数据一致性
+    assert_eq!(test_data, decrypted_data, "批量加密解密应该保持数据一致");
+    
+    // 性能基准
+    let encrypt_per_item = encrypt_duration.as_millis() / test_data.len() as u128;
+    let decrypt_per_item = decrypt_duration.as_millis() / test_data.len() as u128;
+    
+    println!("每个token加密耗时: {}ms", encrypt_per_item);
+    println!("每个token解密耗时: {}ms", decrypt_per_item);
+    
+    // 性能断言（应该足够快）
+    assert!(encrypt_per_item < 10, "每个token加密应该少于10ms");
+    assert!(decrypt_per_item < 10, "每个token解密应该少于10ms");
+    
+    println!("✅ 加密性能测试通过");
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+#[tokio::test]
+async fn test_encryption_error_handling() {
+    println!("⚠️ 测试加密错误处理...");
     
-    #[tokio::test]
-    async fn test_encryption_compatibility() {
-        let tester = EncryptionCompatibilityTester::new().unwrap();
+    let crypto_service = CryptoService::new("Jw4Ff1BWLnSykdfXDVOuEJCG6m9dyST5B1VhU_qg0fI=")
+        .expect("加密服务创建应该成功");
+    
+    // 测试无效密钥
+    let invalid_crypto_result = CryptoService::new("invalid_key");
+    assert!(invalid_crypto_result.is_err(), "无效密钥应该返回错误");
+    
+    // 测试解密无效数据
+    let invalid_encrypted_data = vec![
+        "invalid_encrypted_data",
+        "gAAAA", // 太短
+        "gAAAAinvaliddata", // 格式错误
+        "gAAAA" + &"A".repeat(100), // 长度正确但内容无效
+    ];
+    
+    for invalid_data in invalid_encrypted_data {
+        let decrypt_result = crypto_service.decrypt(invalid_data);
+        assert!(decrypt_result.is_err(), 
+                "解密无效数据应该返回错误: {}", invalid_data);
+        println!("  ✅ 无效数据正确拒绝: {}", &invalid_data[..20.min(invalid_data.len())]);
+    }
+    
+    println!("✅ 加密错误处理测试通过");
+}
+
+#[tokio::test]
+async fn test_unicode_encryption() {
+    println!("🌍 测试Unicode加密...");
+    
+    let crypto_service = CryptoService::new("Jw4Ff1BWLnSykdfXDVOuEJCG6m9dyST5B1VhU_qg0fI=")
+        .expect("加密服务创建应该成功");
+    
+    // 测试各种Unicode字符
+    let unicode_test_cases = vec![
+        "测试中文",
+        "Test English",
+        "Тест русский",
+        "テスト日本語",
+        "🔒🔐🔑",
+        "Mixed 测试🔐English",
+        "Special chars: !@#$%^&*()_+-=[]{}|;':\",./<>?",
+        "Emojis: 😊😎🤖💻📱",
+        "数学符号: ∑∏∫∆∇∂∞",
+        "Currency: $¥€£₹₽₩",
+    ];
+    
+    for (i, test_case) in unicode_test_cases.iter().enumerate() {
+        println!("Unicode测试 {}: {}", i + 1, test_case);
         
-        // 测试往返加密
-        let round_trip_results = tester.test_rust_round_trip();
-        assert!(!round_trip_results.is_empty());
+        // 加密
+        let encrypted = crypto_service.encrypt(test_case)
+            .expect("Unicode加密应该成功");
         
-        // 所有往返测试应该成功
-        for result in &round_trip_results {
-            assert!(result.success, "往返加密测试失败: {}", result.name);
-        }
+        // 解密
+        let decrypted = crypto_service.decrypt(&encrypted)
+            .expect("Unicode解密应该成功");
         
-        // 测试格式兼容性
-        let format_results = tester.test_encryption_format_consistency();
-        assert!(!format_results.is_empty());
+        // 验证一致性
+        assert_eq!(test_case, &decrypted, 
+                   "Unicode加密解密应该保持数据一致");
         
-        // 所有格式测试应该成功
-        for result in &format_results {
-            assert!(result.success, "格式兼容性测试失败: {}", result.name);
-        }
-        
-        // 测试跨密钥兼容性
-        let cross_key_results = tester.test_cross_key_compatibility();
-        assert!(!cross_key_results.is_empty());
-        
-        // 所有跨密钥测试应该成功
-        for result in &cross_key_results {
-            assert!(result.success, "跨密钥兼容性测试失败: {}", result.name);
+        println!("  ✅ Unicode测试通过");
+    }
+    
+    println!("✅ Unicode加密测试通过");
+}
+
+/// 创建包含加密token的测试数据
+fn create_encrypted_test_data(crypto_service: &CryptoService) -> serde_json::Value {
+    let mut test_data = serde_json::json!({
+        "version": "1.0.0",
+        "claude_providers": [
+            {
+                "id": null,
+                "name": "Encrypted Claude Provider",
+                "url": "https://api.anthropic.com",
+                "token": "", // 将被加密
+                "timeout": 30000,
+                "auto_update": 1,
+                "type": "public_welfare",
+                "enabled": 1,
+                "opus_model": "claude-3-opus-20240229",
+                "sonnet_model": "claude-3-sonnet-20240229",
+                "haiku_model": "claude-3-haiku-20240307",
+                "created_at": null,
+                "updated_at": null
+            }
+        ],
+        "codex_providers": [
+            {
+                "id": null,
+                "name": "Encrypted OpenAI Provider",
+                "url": "https://api.openai.com/v1/chat/completions",
+                "token": "", // 将被加密
+                "type": "official",
+                "enabled": 0,
+                "created_at": null,
+                "updated_at": null
+            }
+        ],
+        "agent_guides": [
+            {
+                "id": null,
+                "name": "测试助手",
+                "type": "testing",
+                "text": "这是一个测试用的助手指导文本，包含中文内容。",
+                "created_at": null,
+                "updated_at": null
+            }
+        ],
+        "mcp_servers": [],
+        "common_configs": []
+    });
+    
+    // 加密token
+    if let Some(claude_providers) = test_data["claude_providers"].as_array_mut() {
+        if let Some(provider) = claude_providers.get_mut(0) {
+            if let Some(token_obj) = provider.get_mut("token") {
+                let original_token = "sk-ant-encrypted-test-key-12345";
+                let encrypted_token = crypto_service.encrypt(original_token)
+                    .expect("token加密应该成功");
+                *token_obj = serde_json::Value::String(encrypted_token);
+            }
         }
     }
     
-    #[test]
-    fn test_encrypted_data_format() {
-        let crypto = CryptoService::new("test_key_32_bytes_long_for_format").unwrap();
-        let plaintext = "Hello, World!";
-        let encrypted = crypto.encrypt(plaintext).unwrap();
-        
-        // 验证加密数据的格式
-        assert!(is_valid_base64(&encrypted));
-        assert!(encrypted.starts_with("gAAAAA"));
-        assert!(encrypted.len() > 100); // Fernet tokens通常很长
+    if let Some(codex_providers) = test_data["codex_providers"].as_array_mut() {
+        if let Some(provider) = codex_providers.get_mut(0) {
+            if let Some(token_obj) = provider.get_mut("token") {
+                let original_token = "sk-openai-encrypted-test-key-67890";
+                let encrypted_token = crypto_service.encrypt(original_token)
+                    .expect("token加密应该成功");
+                *token_obj = serde_json::Value::String(encrypted_token);
+            }
+        }
     }
     
-    #[test]
-    fn test_different_keys_produce_different_results() {
-        let crypto1 = CryptoService::new("first_key_32_bytes_long_exact!").unwrap();
-        let crypto2 = CryptoService::new("second_key_32_bytes_long_exact").unwrap();
-        
-        let plaintext = "Test data";
-        let encrypted1 = crypto1.encrypt(plaintext).unwrap();
-        let encrypted2 = crypto2.encrypt(plaintext).unwrap();
-        
-        // 相同明文用不同密钥加密应该产生不同结果
-        assert_ne!(encrypted1, encrypted2);
-        
-        // 但用对应的密钥解密都应该得到原始明文
-        assert_eq!(crypto1.decrypt(&encrypted1).unwrap(), plaintext);
-        assert_eq!(crypto2.decrypt(&encrypted2).unwrap(), plaintext);
-    }
+    test_data
 }

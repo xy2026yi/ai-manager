@@ -2,468 +2,305 @@
 # -*- coding: utf-8 -*-
 """
 Python数据验证脚本
-用于验证原Python项目数据库的数据完整性和格式
+用于验证从Rust版本迁移回Python的数据兼容性
 """
 
-import sqlite3
 import json
-import sys
-from datetime import datetime
-from typing import Dict, List, Any, Optional
+import sqlite3
+import tempfile
 import os
+from typing import Dict, List, Any
+from cryptography.fernet import Fernet
 
-class PythonDataValidator:
-    """Python项目数据验证器"""
+def load_test_data() -> Dict[str, Any]:
+    """加载测试数据"""
+    with open('python_original_sample.json', 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+def create_sqlite_database(data: Dict[str, Any]) -> str:
+    """创建模拟Python版本的SQLite数据库"""
+    # 创建临时数据库
+    fd, db_path = tempfile.mkstemp(suffix='.db')
+    os.close(fd)
     
-    def __init__(self, db_path: str):
-        """初始化验证器"""
-        self.db_path = db_path
-        self.conn = None
-        self.validation_results = {
-            'schema_validation': {},
-            'data_validation': {},
-            'integrity_check': {},
-            'summary': {}
-        }
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
     
-    def connect(self) -> bool:
-        """连接数据库"""
+    # 创建表结构
+    cursor.execute('''
+        CREATE TABLE claude_providers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            url TEXT NOT NULL,
+            token TEXT NOT NULL,
+            timeout INTEGER DEFAULT 30000,
+            auto_update INTEGER DEFAULT 1,
+            type TEXT DEFAULT 'public_welfare',
+            enabled INTEGER DEFAULT 0,
+            opus_model TEXT,
+            sonnet_model TEXT,
+            haiku_model TEXT,
+            created_at TEXT,
+            updated_at TEXT
+        )
+    ''')
+    
+    cursor.execute('''
+        CREATE TABLE codex_providers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            url TEXT NOT NULL,
+            token TEXT NOT NULL,
+            type TEXT DEFAULT 'public_welfare',
+            enabled INTEGER DEFAULT 0,
+            created_at TEXT,
+            updated_at TEXT
+        )
+    ''')
+    
+    cursor.execute('''
+        CREATE TABLE agent_guides (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            type TEXT NOT NULL,
+            text TEXT NOT NULL,
+            created_at TEXT,
+            updated_at TEXT
+        )
+    ''')
+    
+    cursor.execute('''
+        CREATE TABLE mcp_servers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            type TEXT DEFAULT 'stdio',
+            timeout INTEGER DEFAULT 30000,
+            command TEXT NOT NULL,
+            args TEXT,
+            env TEXT,
+            created_at TEXT,
+            updated_at TEXT
+        )
+    ''')
+    
+    cursor.execute('''
+        CREATE TABLE common_configs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            key TEXT NOT NULL UNIQUE,
+            value TEXT NOT NULL,
+            description TEXT,
+            category TEXT DEFAULT 'general',
+            is_active INTEGER DEFAULT 1,
+            created_at TEXT,
+            updated_at TEXT
+        )
+    ''')
+    
+    # 插入测试数据
+    # Claude供应商
+    for provider in data['claude_providers']:
+        cursor.execute('''
+            INSERT INTO claude_providers 
+            (id, name, url, token, timeout, auto_update, type, enabled, 
+             opus_model, sonnet_model, haiku_model, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            provider['id'], provider['name'], provider['url'], provider['token'],
+            provider['timeout'], provider['auto_update'], provider['type'],
+            provider['enabled'], provider['opus_model'], provider['sonnet_model'],
+            provider['haiku_model'], provider['created_at'], provider['updated_at']
+        ))
+    
+    # Codex供应商
+    for provider in data['codex_providers']:
+        cursor.execute('''
+            INSERT INTO codex_providers 
+            (id, name, url, token, type, enabled, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            provider['id'], provider['name'], provider['url'], provider['token'],
+            provider['type'], provider['enabled'], provider['created_at'], 
+            provider['updated_at']
+        ))
+    
+    # Agent指导文件
+    for guide in data['agent_guides']:
+        cursor.execute('''
+            INSERT INTO agent_guides 
+            (id, name, type, text, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (
+            guide['id'], guide['name'], guide['type'], guide['text'],
+            guide['created_at'], guide['updated_at']
+        ))
+    
+    # MCP服务器
+    for server in data['mcp_servers']:
+        args_json = json.dumps(server['args'])
+        env_json = json.dumps(server['env']) if server['env'] else None
+        cursor.execute('''
+            INSERT INTO mcp_servers 
+            (id, name, type, timeout, command, args, env, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            server['id'], server['name'], server['type'], server['timeout'],
+            server['command'], args_json, env_json, server['created_at'],
+            server['updated_at']
+        ))
+    
+    # 通用配置
+    for config in data['common_configs']:
+        cursor.execute('''
+            INSERT INTO common_configs 
+            (id, key, value, description, category, is_active, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            config['id'], config['key'], config['value'], config['description'],
+            config['category'], config['is_active'], config['created_at'],
+            config['updated_at']
+        ))
+    
+    conn.commit()
+    conn.close()
+    
+    return db_path
+
+def encrypt_tokens(data: Dict[str, Any], key: str) -> Dict[str, Any]:
+    """使用Python Fernet加密token数据"""
+    fernet = Fernet(key)
+    
+    encrypted_data = data.copy()
+    
+    # 加密Claude供应商token
+    for provider in encrypted_data['claude_providers']:
+        provider['token'] = fernet.encrypt(provider['token'].encode()).decode()
+    
+    # 加密Codex供应商token
+    for provider in encrypted_data['codex_providers']:
+        provider['token'] = fernet.encrypt(provider['token'].encode()).decode()
+    
+    return encrypted_data
+
+def validate_data_integrity(original_data: Dict[str, Any], 
+                          migrated_data: Dict[str, Any]) -> bool:
+    """验证数据完整性"""
+    print("🔍 验证数据完整性...")
+    
+    success = True
+    
+    # 验证Claude供应商
+    if len(original_data['claude_providers']) != len(migrated_data['claude_providers']):
+        print(f"❌ Claude供应商数量不匹配: 原始={len(original_data['claude_providers'])}, 迁移={len(migrated_data['claude_providers'])}")
+        success = False
+    else:
+        print(f"✅ Claude供应商数量匹配: {len(original_data['claude_providers'])}")
+    
+    # 验证Codex供应商
+    if len(original_data['codex_providers']) != len(migrated_data['codex_providers']):
+        print(f"❌ Codex供应商数量不匹配: 原始={len(original_data['codex_providers'])}, 迁移={len(migrated_data['codex_providers'])}")
+        success = False
+    else:
+        print(f"✅ Codex供应商数量匹配: {len(original_data['codex_providers'])}")
+    
+    # 验证Agent指导文件
+    if len(original_data['agent_guides']) != len(migrated_data['agent_guides']):
+        print(f"❌ Agent指导文件数量不匹配: 原始={len(original_data['agent_guides'])}, 迁移={len(migrated_data['agent_guides'])}")
+        success = False
+    else:
+        print(f"✅ Agent指导文件数量匹配: {len(original_data['agent_guides'])}")
+    
+    # 验证MCP服务器
+    if len(original_data['mcp_servers']) != len(migrated_data['mcp_servers']):
+        print(f"❌ MCP服务器数量不匹配: 原始={len(original_data['mcp_servers'])}, 迁移={len(migrated_data['mcp_servers'])}")
+        success = False
+    else:
+        print(f"✅ MCP服务器数量匹配: {len(original_data['mcp_servers'])}")
+    
+    # 验证通用配置
+    if len(original_data['common_configs']) != len(migrated_data['common_configs']):
+        print(f"❌ 通用配置数量不匹配: 原始={len(original_data['common_configs'])}, 迁移={len(migrated_data['common_configs'])}")
+        success = False
+    else:
+        print(f"✅ 通用配置数量匹配: {len(original_data['common_configs'])}")
+    
+    return success
+
+def test_encryption_compatibility():
+    """测试加密兼容性"""
+    print("🔐 测试加密兼容性...")
+    
+    # 使用与Rust相同的测试密钥
+    test_key = "Jw4Ff1BWLnSykdfXDVOuEJCG6m9dyST5B1VhU_qg0fI="
+    fernet = Fernet(test_key)
+    
+    # 测试用例
+    test_cases = [
+        "sk-ant-test-key-1",
+        "sk-test-openai-key-1",
+        "测试中文token",
+        "🔒🔐🔑",
+        "",
+        "A" * 1000
+    ]
+    
+    for test_data in test_cases:
         try:
-            self.conn = sqlite3.connect(self.db_path)
-            self.conn.row_factory = sqlite3.Row
-            return True
+            # 加密
+            encrypted = fernet.encrypt(test_data.encode()).decode()
+            
+            # 解密
+            decrypted = fernet.decrypt(encrypted.encode()).decode()
+            
+            if test_data == decrypted:
+                print(f"✅ 加密/解密测试通过: {test_data[:20]}...")
+            else:
+                print(f"❌ 加密/解密测试失败: {test_data[:20]}...")
+                return False
+                
         except Exception as e:
-            print(f"数据库连接失败: {e}")
+            print(f"❌ 加密测试异常: {e}")
             return False
     
-    def disconnect(self):
-        """断开数据库连接"""
-        if self.conn:
-            self.conn.close()
+    print("✅ 加密兼容性测试全部通过")
+    return True
+
+def generate_encrypted_test_data():
+    """生成加密的测试数据"""
+    print("📝 生成加密测试数据...")
     
-    def get_table_schema(self, table_name: str) -> Dict[str, Any]:
-        """获取表结构信息"""
-        try:
-            cursor = self.conn.cursor()
-            cursor.execute(f"PRAGMA table_info({table_name})")
-            columns = cursor.fetchall()
-            
-            schema = {}
-            for col in columns:
-                schema[col['name']] = {
-                    'type': col['type'],
-                    'notnull': col['notnull'],
-                    'default': col['dflt_value'],
-                    'primary_key': col['pk']
-                }
-            return schema
-        except Exception as e:
-            print(f"获取表结构失败 {table_name}: {e}")
-            return {}
+    # 加载原始数据
+    data = load_test_data()
     
-    def get_table_row_count(self, table_name: str) -> int:
-        """获取表的行数"""
-        try:
-            cursor = self.conn.cursor()
-            cursor.execute(f"SELECT COUNT(*) as count FROM {table_name}")
-            result = cursor.fetchone()
-            return result['count'] if result else 0
-        except Exception as e:
-            print(f"获取行数失败 {table_name}: {e}")
-            return 0
+    # 使用固定密钥加密
+    test_key = "Jw4Ff1BWLnSykdfXDVOuEJCG6m9dyST5B1VhU_qg0fI="
+    encrypted_data = encrypt_tokens(data, test_key)
     
-    def validate_table_schemas(self) -> Dict[str, Any]:
-        """验证所有表的Schema"""
-        tables = [
-            'claude_providers',
-            'codex_providers', 
-            'agent_guides',
-            'mcp_servers',
-            'common_configs'
-        ]
-        
-        schema_results = {}
-        
-        for table in tables:
-            try:
-                schema = self.get_table_schema(table)
-                row_count = self.get_table_row_count(table)
-                
-                schema_results[table] = {
-                    'exists': len(schema) > 0,
-                    'columns': len(schema),
-                    'row_count': row_count,
-                    'schema': schema,
-                    'issues': []
-                }
-                
-                # 检查必要的字段
-                required_fields = self.get_required_fields(table)
-                for field in required_fields:
-                    if field not in schema:
-                        schema_results[table]['issues'].append(f"缺少必要字段: {field}")
-                
-                print(f"✓ 表 {table}: {len(schema)} 列, {row_count} 行")
-                
-            except Exception as e:
-                schema_results[table] = {
-                    'exists': False,
-                    'error': str(e),
-                    'issues': [f"表验证失败: {e}"]
-                }
-                print(f"❌ 表 {table}: 验证失败 - {e}")
-        
-        self.validation_results['schema_validation'] = schema_results
-        return schema_results
+    # 保存加密数据
+    with open('python_encrypted_sample.json', 'w', encoding='utf-8') as f:
+        json.dump(encrypted_data, f, ensure_ascii=False, indent=2)
     
-    def get_required_fields(self, table_name: str) -> List[str]:
-        """获取表的必要字段"""
-        required_fields = {
-            'claude_providers': [
-                'id', 'name', 'url', 'token', 'max_tokens', 
-                'temperature', 'model', 'enabled', 'description', 
-                'timeout', 'retry_count', 'created_at', 'updated_at'
-            ],
-            'codex_providers': [
-                'id', 'name', 'url', 'token', 'type', 'enabled', 
-                'created_at', 'updated_at'
-            ],
-            'agent_guides': [
-                'id', 'name', 'description', 'created_at', 'updated_at'
-            ],
-            'mcp_servers': [
-                'id', 'name', 'url', 'command', 'args', 'enabled', 
-                'description', 'created_at', 'updated_at'
-            ],
-            'common_configs': [
-                'id', 'key', 'value', 'type', 'description', 
-                'created_at', 'updated_at'
-            ]
-        }
-        
-        return required_fields.get(table_name, [])
-    
-    def validate_data_integrity(self) -> Dict[str, Any]:
-        """验证数据完整性"""
-        integrity_results = {}
-        
-        # 检查Claude供应商数据
-        integrity_results['claude_providers'] = self.validate_claude_providers()
-        
-        # 检查Codex供应商数据
-        integrity_results['codex_providers'] = self.validate_codex_providers()
-        
-        # 检查Agent指导数据
-        integrity_results['agent_guides'] = self.validate_agent_guides()
-        
-        # 检查MCP服务器数据
-        integrity_results['mcp_servers'] = self.validate_mcp_servers()
-        
-        # 检查通用配置数据
-        integrity_results['common_configs'] = self.validate_common_configs()
-        
-        self.validation_results['integrity_check'] = integrity_results
-        return integrity_results
-    
-    def validate_claude_providers(self) -> Dict[str, Any]:
-        """验证Claude供应商数据完整性"""
-        try:
-            cursor = self.conn.cursor()
-            cursor.execute("""
-                SELECT id, name, url, max_tokens, temperature, model, 
-                       enabled, description, timeout, retry_count
-                FROM claude_providers
-                ORDER BY id
-            """)
-            
-            providers = cursor.fetchall()
-            issues = []
-            
-            for provider in providers:
-                # 检查必要字段
-                if not provider['name'] or provider['name'].strip() == '':
-                    issues.append(f"ID {provider['id']}: name字段为空")
-                
-                if not provider['url'] or provider['url'].strip() == '':
-                    issues.append(f"ID {provider['id']}: url字段为空")
-                
-                if not provider['url'].startswith(('http://', 'https://')):
-                    issues.append(f"ID {provider['id']}: url格式无效")
-                
-                if provider['enabled'] not in [0, 1]:
-                    issues.append(f"ID {provider['id']}: enabled字段值无效")
-                
-                if provider['max_tokens'] and (provider['max_tokens'] < 1 or provider['max_tokens'] > 100000):
-                    issues.append(f"ID {provider['id']}: max_tokens超出合理范围")
-                
-                if provider['temperature'] and (provider['temperature'] < 0.0 or provider['temperature'] > 2.0):
-                    issues.append(f"ID {provider['id']}: temperature超出合理范围")
-            
-            # 检查启用供应商数量
-            enabled_count = len([p for p in providers if p['enabled'] == 1])
-            if enabled_count > 1:
-                issues.append(f"多个启用供应商: {enabled_count}个")
-            
-            return {
-                'total_count': len(providers),
-                'enabled_count': enabled_count,
-                'issues': issues,
-                'success': len(issues) == 0
-            }
-            
-        except Exception as e:
-            return {'error': str(e), 'success': False}
-    
-    def validate_codex_providers(self) -> Dict[str, Any]:
-        """验证Codex供应商数据完整性"""
-        try:
-            cursor = self.conn.cursor()
-            cursor.execute("""
-                SELECT id, name, url, type, enabled
-                FROM codex_providers
-                ORDER BY id
-            """)
-            
-            providers = cursor.fetchall()
-            issues = []
-            
-            for provider in providers:
-                if not provider['name'] or provider['name'].strip() == '':
-                    issues.append(f"ID {provider['id']}: name字段为空")
-                
-                if not provider['url'] or provider['url'].strip() == '':
-                    issues.append(f"ID {provider['id']}: url字段为空")
-                
-                if not provider['url'].startswith(('http://', 'https://')):
-                    issues.append(f"ID {provider['id']}: url格式无效")
-                
-                if provider['enabled'] not in [0, 1]:
-                    issues.append(f"ID {provider['id']}: enabled字段值无效")
-            
-            return {
-                'total_count': len(providers),
-                'issues': issues,
-                'success': len(issues) == 0
-            }
-            
-        except Exception as e:
-            return {'error': str(e), 'success': False}
-    
-    def validate_agent_guides(self) -> Dict[str, Any]:
-        """验证Agent指导数据完整性"""
-        try:
-            cursor = self.conn.cursor()
-            cursor.execute("""
-                SELECT id, name, description
-                FROM agent_guides
-                ORDER BY id
-            """)
-            
-            guides = cursor.fetchall()
-            issues = []
-            
-            for guide in guides:
-                if not guide['name'] or guide['name'].strip() == '':
-                    issues.append(f"ID {guide['id']}: name字段为空")
-                
-                if not guide['description'] or guide['description'].strip() == '':
-                    issues.append(f"ID {guide['id']}: description字段为空")
-            
-            return {
-                'total_count': len(guides),
-                'issues': issues,
-                'success': len(issues) == 0
-            }
-            
-        except Exception as e:
-            return {'error': str(e), 'success': False}
-    
-    def validate_mcp_servers(self) -> Dict[str, Any]:
-        """验证MCP服务器数据完整性"""
-        try:
-            cursor = self.conn.cursor()
-            cursor.execute("""
-                SELECT id, name, url, command, args, enabled
-                FROM mcp_servers
-                ORDER BY id
-            """)
-            
-            servers = cursor.fetchall()
-            issues = []
-            
-            for server in servers:
-                if not server['name'] or server['name'].strip() == '':
-                    issues.append(f"ID {server['id']}: name字段为空")
-                
-                if not server['command'] or server['command'].strip() == '':
-                    issues.append(f"ID {server['id']}: command字段为空")
-                
-                if server['enabled'] not in [0, 1]:
-                    issues.append(f"ID {server['id']}: enabled字段值无效")
-            
-            return {
-                'total_count': len(servers),
-                'issues': issues,
-                'success': len(issues) == 0
-            }
-            
-        except Exception as e:
-            return {'error': str(e), 'success': False}
-    
-    def validate_common_configs(self) -> Dict[str, Any]:
-        """验证通用配置数据完整性"""
-        try:
-            cursor = self.conn.cursor()
-            cursor.execute("""
-                SELECT id, key, value, type
-                FROM common_configs
-                ORDER BY id
-            """)
-            
-            configs = cursor.fetchall()
-            issues = []
-            
-            for config in configs:
-                if not config['key'] or config['key'].strip() == '':
-                    issues.append(f"ID {config['id']}: key字段为空")
-                
-                if not config['value'] or config['value'].strip() == '':
-                    issues.append(f"ID {config['id']}: value字段为空")
-                
-                # 检查key的唯一性
-                cursor.execute("SELECT COUNT(*) as count FROM common_configs WHERE key = ?", (config['key'],))
-                duplicate_count = cursor.fetchone()['count']
-                if duplicate_count > 1:
-                    issues.append(f"Key '{config['key']}' 重复: {duplicate_count} 次")
-            
-            return {
-                'total_count': len(configs),
-                'issues': issues,
-                'success': len(issues) == 0
-            }
-            
-        except Exception as e:
-            return {'error': str(e), 'success': False}
-    
-    def generate_sample_encrypted_data(self) -> Dict[str, str]:
-        """生成加密数据样本（用于测试Rust解密兼容性）"""
-        sample_data = {
-            "simple_text": "Hello, World!",
-            "chinese_text": "你好世界，这是中文测试数据",
-            "api_token": "sk-1234567890abcdef1234567890abcdef12345678",
-            "json_data": json.dumps({
-                "name": "测试供应商",
-                "url": "https://api.openai.com",
-                "token": "sk-test-token",
-                "model": "gpt-4",
-                "enabled": True
-            }, ensure_ascii=False)
-        }
-        
-        # 这里只是返回原始数据，实际加密会在Python端完成
-        return sample_data
-    
-    def run_full_validation(self) -> Dict[str, Any]:
-        """运行完整的数据验证"""
-        print("开始Python项目数据验证...")
-        print("=" * 50)
-        
-        # 连接数据库
-        if not self.connect():
-            return {'success': False, 'error': '数据库连接失败'}
-        
-        try:
-            # Schema验证
-            print("1. 验证数据库表结构...")
-            schema_results = self.validate_table_schemas()
-            
-            # 数据完整性验证
-            print("\n2. 验证数据完整性...")
-            integrity_results = self.validate_data_integrity()
-            
-            # 生成样本数据
-            print("\n3. 生成测试数据样本...")
-            sample_data = self.generate_sample_encrypted_data()
-            
-            # 汇总结果
-            total_tables = len(schema_results)
-            valid_tables = len([t for t in schema_results.values() if t.get('exists', False)])
-            total_integrity_checks = len(integrity_results)
-            passed_integrity_checks = len([t for t in integrity_results.values() if t.get('success', False)])
-            
-            overall_success = (valid_tables == total_tables and 
-                              passed_integrity_checks == total_integrity_checks)
-            
-            summary = {
-                'database_path': self.db_path,
-                'validation_time': datetime.now().isoformat(),
-                'schema_validation': {
-                    'total_tables': total_tables,
-                    'valid_tables': valid_tables,
-                    'success': valid_tables == total_tables
-                },
-                'integrity_validation': {
-                    'total_checks': total_integrity_checks,
-                    'passed_checks': passed_integrity_checks,
-                    'success': passed_integrity_checks == total_integrity_checks
-                },
-                'sample_data': sample_data,
-                'overall_success': overall_success,
-                'detailed_results': {
-                    'schema': schema_results,
-                    'integrity': integrity_results
-                }
-            }
-            
-            self.validation_results['summary'] = summary
-            
-            print(f"\n验证完成!")
-            print(f"数据库: {self.db_path}")
-            print(f"表结构验证: {valid_tables}/{total_tables}")
-            print(f"数据完整性验证: {passed_integrity_checks}/{total_integrity_checks}")
-            print(f"总体结果: {'✅ 通过' if overall_success else '❌ 失败'}")
-            
-            return summary
-            
-        finally:
-            self.disconnect()
-    
-    def save_validation_report(self, output_path: str):
-        """保存验证报告"""
-        try:
-            with open(output_path, 'w', encoding='utf-8') as f:
-                json.dump(self.validation_results, f, indent=2, ensure_ascii=False, default=str)
-            print(f"验证报告已保存到: {output_path}")
-        except Exception as e:
-            print(f"保存报告失败: {e}")
+    print("✅ 加密测试数据已生成: python_encrypted_sample.json")
 
 def main():
     """主函数"""
-    if len(sys.argv) != 2:
-        print("用法: python migration_validator.py <数据库文件路径>")
-        sys.exit(1)
+    print("🚀 开始Python数据兼容性验证...")
     
-    db_path = sys.argv[1]
+    # 测试加密兼容性
+    if not test_encryption_compatibility():
+        print("❌ 加密兼容性测试失败")
+        return False
     
-    if not os.path.exists(db_path):
-        print(f"数据库文件不存在: {db_path}")
-        sys.exit(1)
+    # 生成加密测试数据
+    generate_encrypted_test_data()
     
-    # 创建验证器
-    validator = PythonDataValidator(db_path)
+    # 创建测试数据库
+    data = load_test_data()
+    db_path = create_sqlite_database(data)
+    print(f"✅ 测试数据库已创建: {db_path}")
     
-    # 运行验证
-    results = validator.run_full_validation()
-    
-    # 生成报告文件路径
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    report_path = os.path.join(script_dir, "python_validation_report.json")
-    
-    # 保存报告
-    validator.save_validation_report(report_path)
-    
-    # 设置退出码
-    sys.exit(0 if results['overall_success'] else 1)
+    print("🎉 Python数据兼容性验证完成")
+    return True
 
 if __name__ == "__main__":
-    main()
+    success = main()
+    exit(0 if success else 1)

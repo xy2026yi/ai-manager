@@ -2,7 +2,7 @@
 //
 // 提供测试数据库连接和配置参数
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use sqlx::SqlitePool;
 
 /// 测试配置
@@ -24,9 +24,10 @@ impl TestConfig {
     pub fn new() -> Self {
         let project_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .parent()
-            .parent()
-            .unwrap_or_else(|| PathBuf::from("."));
-        
+            .and_then(Path::parent)
+            .unwrap_or_else(|| Path::new("."))
+            .to_path_buf();
+
         Self {
             original_db_path: project_root.join("../ai-manager/ai_manager.db"),
             migrated_db_path: project_root.join("src-tauri/ai_manager.db"),

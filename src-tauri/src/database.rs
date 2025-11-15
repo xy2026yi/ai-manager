@@ -144,6 +144,12 @@ impl DatabaseManager {
         }
     }
 
+    /// 健康检查
+    pub async fn health_check(&self) -> Result<(), sqlx::Error> {
+        self.pool.acquire().await?;
+        Ok(())
+    }
+
     /// 关闭连接池
     pub async fn close(self) {
         info!("关闭数据库连接池");

@@ -175,6 +175,8 @@ fn bench_memory_efficiency(c: &mut Criterion) {
                 encrypted_data.push(encrypted);
             }
             
+            let encrypted_count = encrypted_data.len();
+
             // 解密所有数据
             let mut decrypted_data = Vec::new();
             for encrypted in encrypted_data {
@@ -182,7 +184,7 @@ fn bench_memory_efficiency(c: &mut Criterion) {
                 decrypted_data.push(decrypted);
             }
             
-            black_box((encrypted_data.len(), decrypted_data.len()))
+            black_box((encrypted_count, decrypted_data.len()))
         });
     });
 }

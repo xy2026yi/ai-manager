@@ -9,9 +9,11 @@ use crate::database::DatabaseManager;
 use crate::models::{ClaudeProvider, CreateClaudeProviderRequest, UpdateClaudeProviderRequest};
 
 /// Claude供应商Repository
+#[derive(Clone)]
 pub struct ClaudeProviderRepository {
-    pool: SqlitePool,
+    pub pool: SqlitePool,
     crypto_service: CryptoService,
+    // pub(crate) db_manager: (),
 }
 
 impl ClaudeProviderRepository {

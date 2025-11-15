@@ -1,0 +1,149 @@
+{
+  "version": "1.0.0",
+  "claude_providers": [
+    {
+      "id": 1,
+      "name": "Claude Public Welfare",
+      "url": "https://api.anthropic.com",
+      "token": "sk-ant-api03-test-key-1",
+      "timeout": 30000,
+      "auto_update": 1,
+      "type": "public_welfare",
+      "enabled": 1,
+      "opus_model": "claude-3-opus-20240229",
+      "sonnet_model": "claude-3-sonnet-20240229",
+      "haiku_model": "claude-3-haiku-20240307",
+      "created_at": "2024-01-15T10:30:00Z",
+      "updated_at": "2024-01-15T10:30:00Z"
+    },
+    {
+      "id": 2,
+      "name": "Claude Alternative",
+      "url": "https://api.anthropic.com",
+      "token": "sk-ant-api03-test-key-2",
+      "timeout": 25000,
+      "auto_update": 0,
+      "type": "self_hosted",
+      "enabled": 0,
+      "opus_model": "claude-3-opus-20240229",
+      "sonnet_model": "claude-3-sonnet-20240229",
+      "haiku_model": "",
+      "created_at": "2024-01-16T14:20:00Z",
+      "updated_at": "2024-01-16T14:20:00Z"
+    }
+  ],
+  "codex_providers": [
+    {
+      "id": 1,
+      "name": "OpenAI Official",
+      "url": "https://api.openai.com/v1/chat/completions",
+      "token": "sk-test-openai-key-1",
+      "type": "official",
+      "enabled": 1,
+      "created_at": "2024-01-15T11:00:00Z",
+      "updated_at": "2024-01-15T11:00:00Z"
+    },
+    {
+      "id": 2,
+      "name": "Azure OpenAI",
+      "url": "https://test.openai.azure.com",
+      "token": "test-azure-key",
+      "type": "azure",
+      "enabled": 0,
+      "created_at": "2024-01-17T09:15:00Z",
+      "updated_at": "2024-01-17T09:15:00Z"
+    }
+  ],
+  "agent_guides": [
+    {
+      "id": 1,
+      "name": "代码审查助手",
+      "type": "code_reviewer",
+      "text": "你是一个专业的代码审查助手。请仔细审查提供的代码，检查代码质量、性能、安全性和最佳实践。提供具体的改进建议。",
+      "created_at": "2024-01-15T12:00:00Z",
+      "updated_at": "2024-01-15T12:00:00Z"
+    },
+    {
+      "id": 2,
+      "name": "文档生成器",
+      "type": "documentation",
+      "text": "请根据提供的代码生成详细的文档，包括函数说明、参数描述、返回值说明和使用示例。",
+      "created_at": "2024-01-16T16:30:00Z",
+      "updated_at": "2024-01-16T16:30:00Z"
+    },
+    {
+      "id": 3,
+      "name": "性能优化顾问",
+      "type": "performance",
+      "text": "分析代码的性能瓶颈，提供优化建议，包括算法改进、内存使用优化和并发处理建议。",
+      "created_at": "2024-01-17T10:45:00Z",
+      "updated_at": "2024-01-17T10:45:00Z"
+    }
+  ],
+  "mcp_servers": [
+    {
+      "id": 1,
+      "name": "filesystem",
+      "type": "stdio",
+      "timeout": 30000,
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-filesystem", "/tmp"],
+      "env": {"NODE_ENV": "production"},
+      "created_at": "2024-01-15T13:00:00Z",
+      "updated_at": "2024-01-15T13:00:00Z"
+    },
+    {
+      "id": 2,
+      "name": "git",
+      "type": "stdio",
+      "timeout": 25000,
+      "command": "uvx",
+      "args": ["mcp-server-git", "--repository", "."],
+      "env": null,
+      "created_at": "2024-01-16T18:20:00Z",
+      "updated_at": "2024-01-16T18:20:00Z"
+    }
+  ],
+  "common_configs": [
+    {
+      "id": 1,
+      "key": "default_claude_model",
+      "value": "claude-3-sonnet-20240229",
+      "description": "默认使用的Claude模型",
+      "category": "models",
+      "is_active": 1,
+      "created_at": "2024-01-15T14:00:00Z",
+      "updated_at": "2024-01-15T14:00:00Z"
+    },
+    {
+      "id": 2,
+      "key": "max_tokens",
+      "value": "4096",
+      "description": "最大token数量",
+      "category": "limits",
+      "is_active": 1,
+      "created_at": "2024-01-15T14:05:00Z",
+      "updated_at": "2024-01-15T14:05:00Z"
+    },
+    {
+      "id": 3,
+      "key": "temperature",
+      "value": "0.7",
+      "description": "生成温度参数",
+      "category": "generation",
+      "is_active": 1,
+      "created_at": "2024-01-15T14:10:00Z",
+      "updated_at": "2024-01-15T14:10:00Z"
+    },
+    {
+      "id": 4,
+      "key": "auto_save_interval",
+      "value": "300",
+      "description": "自动保存间隔（秒）",
+      "category": "ui",
+      "is_active": 0,
+      "created_at": "2024-01-16T20:00:00Z",
+      "updated_at": "2024-01-16T20:00:00Z"
+    }
+  ]
+}

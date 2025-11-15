@@ -6,12 +6,8 @@ use std::path::Path;
 use std::time::Instant;
 use tokio::time::{sleep, Duration};
 
-use crate::tests::migration_test_config::{TestConfig, DatabasePreparer};
-use crate::tests::migration_test::{DataIntegrityValidator, TestResult};
-use crate::tests::encryption_compatibility_test::{EncryptionCompatibilityTester, EncryptionTestResult};
-use crate::migration::data_migrator::DataMigrator;
-use crate::crypto::CryptoService;
-use crate::database::DatabaseManager;
+use migration_ai_manager_lib::crypto::CryptoService;
+use migration_ai_manager_lib::database::{DatabaseManager, DatabaseConfig};
 
 /// 测试运行结果
 #[derive(Debug)]
@@ -35,7 +31,7 @@ pub struct TestRunnerResult {
 }
 
 /// 迁移功能测试结果
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MigrationTestResult {
     pub passed: bool,
     pub migrated_records: i64,
@@ -48,6 +44,7 @@ pub struct MigrationTestResult {
 pub struct DataCompatibilityTestRunner {
     config: TestConfig,
     verbose: bool,
+    warnings: Vec<String>,
 }
 
 impl DataCompatibilityTestRunner {
@@ -56,6 +53,7 @@ impl DataCompatibilityTestRunner {
         Self {
             config: TestConfig::new(),
             verbose,
+            warnings: Vec::new(),
         }
     }
 

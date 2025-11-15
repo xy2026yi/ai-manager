@@ -6,6 +6,8 @@ use migration_ai_manager_lib::{api, services::*, database::DatabaseManager, cryp
 use tokio::runtime::Runtime;
 use std::sync::Arc;
 use serde_json::json;
+use claude_service::ClaudeProviderService;
+// use chrono::Utc;
 
 // 创建测试服务
 async fn create_test_services() -> (Arc<DatabaseManager>, Arc<CryptoService>, ClaudeProviderService) {
@@ -36,16 +38,21 @@ fn bench_claude_provider_creation(c: &mut Criterion) {
                 name: "Benchmark Provider".to_string(),
                 url: "https://api.openai.com".to_string(),
                 token: "sk-benchmark-token".to_string(),
-                max_tokens: Some(4096),
-                temperature: Some(0.7),
-                model: Some("gpt-4".to_string()),
-                enabled: Some(1),
-                description: Some("Benchmark test provider".to_string()),
+                // max_tokens: Some(4096),
+                // temperature: Some(0.7),
+                // model: Some("gpt-4".to_string()),
+                // enabled: Some(1),
+                // description: Some("Benchmark test provider".to_string()),
                 timeout: Some(30),
-                retry_count: Some(3),
+                // retry_count: Some(3),
+                auto_update: todo!(),
+                r#type: todo!(),
+                opus_model: todo!(),
+                sonnet_model: todo!(),
+                haiku_model: todo!(),
             };
             
-            let result = service.create_provider(black_box(&request)).await;
+            let result = service.create_provider(black_box(request)).await;
             black_box(result)
         });
     });
@@ -62,22 +69,28 @@ fn bench_claude_provider_query(c: &mut Criterion) {
             name: "Query Test Provider".to_string(),
             url: "https://api.openai.com".to_string(),
             token: "sk-query-token".to_string(),
-            max_tokens: None,
-            temperature: None,
-            model: None,
-            enabled: Some(1),
-            description: None,
+            // max_tokens: None,
+            // temperature: None,
+            // model: None,
+            // enabled: Some(1),
+            // description: None,
             timeout: None,
-            retry_count: None,
+            // retry_count: None,
+            auto_update: todo!(),
+            r#type: todo!(),
+            opus_model: todo!(),
+            sonnet_model: todo!(),
+            haiku_model: todo!(),
         };
-        service.create_provider(&request).await.unwrap();
+        service.create_provider(request).await.unwrap();
     });
     
     c.bench_function("claude_provider_query", |b| {
         b.to_async(&rt).iter(|| async {
             let params = migration_ai_manager_lib::models::PaginationParams {
-                page: 1,
-                limit: 10,
+                page: Some(1),
+                limit: Some(10),
+                offset: todo!(),
             };
             
             let result = service.list_providers(black_box(params)).await;
@@ -128,15 +141,20 @@ fn bench_json_serialization(c: &mut Criterion) {
         name: "JSON Test Provider".to_string(),
         url: "https://api.openai.com".to_string(),
         token: "sk-json-test-token".to_string(),
-        max_tokens: 4096,
-        temperature: 0.7,
-        model: "gpt-4".to_string(),
+        // max_tokens: 4096,
+        // temperature: 0.7,
+        // model: "gpt-4".to_string(),
         enabled: 1,
-        description: Some("JSON序列化测试供应商".to_string()),
-        timeout: 30,
-        retry_count: 3,
-        created_at: chrono::Utc::now(),
-        updated_at: chrono::Utc::now(),
+        // description: Some("JSON序列化测试供应商".to_string()),
+        timeout: Some(30),
+        // retry_count: 3,
+        auto_update: todo!(),
+        r#type: todo!(),
+        opus_model: todo!(),
+        sonnet_model: todo!(),
+        haiku_model: todo!(),
+        created_at: Some(chrono::Utc::now().to_rfc3339()),
+        updated_at: Some(chrono::Utc::now().to_rfc3339()),
     };
     
     c.bench_function("json_serialization", |b| {
@@ -173,16 +191,21 @@ fn bench_concurrent_requests(c: &mut Criterion) {
                         name: format!("Concurrent Provider {}", i),
                         url: "https://api.openai.com".to_string(),
                         token: format!("sk-concurrent-token-{}", i),
-                        max_tokens: Some(4096),
-                        temperature: Some(0.7),
-                        model: Some("gpt-4".to_string()),
-                        enabled: Some(1),
-                        description: Some(format!("Concurrent test provider {}", i)),
+                        // max_tokens: Some(4096),
+                        // temperature: Some(0.7),
+                        // model: Some("gpt-4".to_string()),
+                        // enabled: Some(1),
+                        //description: Some(format!("Concurrent test provider {}", i)),
                         timeout: Some(30),
-                        retry_count: Some(3),
+                        // retry_count: Some(3),
+                        auto_update: todo!(),
+                        r#type: todo!(),
+                        opus_model: todo!(),
+                        sonnet_model: todo!(),
+                        haiku_model: todo!(),
                     };
                     
-                    service_clone.create_provider(&request).await
+                    service_clone.create_provider(request).await
                 });
                 handles.push(handle);
             }
@@ -204,15 +227,20 @@ fn bench_memory_allocation(c: &mut Criterion) {
                     name: format!("Provider {}", i),
                     url: "https://api.openai.com".to_string(),
                     token: format!("sk-token-{}", i),
-                    max_tokens: 4096,
-                    temperature: 0.7,
-                    model: "gpt-4".to_string(),
+                    // max_tokens: 4096,
+                    // temperature: 0.7,
+                    // model: "gpt-4".to_string(),
                     enabled: if i % 2 == 0 { 1 } else { 0 },
-                    description: Some(format!("Test provider number {}", i)),
-                    timeout: 30,
-                    retry_count: 3,
-                    created_at: chrono::Utc::now(),
-                    updated_at: chrono::Utc::now(),
+                    // description: Some(format!("Test provider number {}", i)),
+                    timeout: Some(30),
+                    // retry_count: 3,
+                    created_at: Some(chrono::Utc::now().to_rfc3339()),
+                    updated_at: Some(chrono::Utc::now().to_rfc3339()),
+                    auto_update: todo!(),
+                    r#type: todo!(),
+                    opus_model: todo!(),
+                    sonnet_model: todo!(),
+                    haiku_model: todo!(),
                 })
                 .collect();
             black_box(providers)

@@ -2,7 +2,7 @@
 // 测试数据库查询、事务处理和连接池性能
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use migration_ai_manager_lib::{database::DatabaseManager, repositories::*, crypto::CryptoService};
+use migration_ai_manager_lib::{database::{DatabaseManager, DatabaseConfig}, repositories::*, crypto::CryptoService};
 use tokio::runtime::Runtime;
 use std::sync::Arc;
 use migration_ai_manager_lib::models::*;
@@ -22,7 +22,7 @@ async fn create_test_database() -> (Arc<DatabaseManager>, Arc<CryptoService>, Cl
     
     // 运行数据库迁移
     sqlx::migrate!("./migrations")
-        .run(&db_manager.pool)
+        .run(db_manager.pool())
         .await
         .expect("Failed to run migrations");
     
@@ -49,13 +49,18 @@ fn bench_batch_insert(c: &mut Criterion) {
                         name: format!("Batch Provider {}", i),
                         url: "https://api.openai.com".to_string(),
                         token: format!("sk-batch-token-{}", i),
-                        max_tokens: Some(4096),
-                        temperature: Some(0.7),
-                        model: Some("gpt-4".to_string()),
-                        enabled: Some(if i % 3 == 0 { 1 } else { 0 }),
-                        description: Some(format!("Batch insert provider {}", i)),
+                        // max_tokens: Some(4096),
+                        // temperature: Some(0.7),
+                        // model: Some("gpt-4".to_string()),
+                        // enabled: Some(if i % 3 == 0 { 1 } else { 0 }),
+                        // description: Some(format!("Batch insert provider {}", i)),
                         timeout: Some(30),
-                        retry_count: Some(3),
+                        auto_update: todo!(),
+                        r#type: todo!(),
+                        opus_model: todo!(),
+                        sonnet_model: todo!(),
+                        haiku_model: todo!(),
+                        // retry_count: Some(3),
                     };
                     
                     repo.create_claude_provider(&request).await
@@ -81,13 +86,18 @@ fn bench_paginated_query(c: &mut Criterion) {
                 name: format!("Query Provider {}", i),
                 url: "https://api.openai.com".to_string(),
                 token: format!("sk-query-token-{}", i),
-                max_tokens: Some(4096),
-                temperature: Some(0.7),
-                model: Some("gpt-4".to_string()),
-                enabled: Some(if i % 5 == 0 { 1 } else { 0 }),
-                description: Some(format!("Query test provider {}", i)),
+                // max_tokens: Some(4096),
+                // temperature: Some(0.7),
+                // model: Some("gpt-4".to_string()),
+                // enabled: Some(if i % 5 == 0 { 1 } else { 0 }),
+                // description: Some(format!("Query test provider {}", i)),
                 timeout: Some(30),
-                retry_count: Some(3),
+                auto_update: todo!(),
+                r#type: todo!(),
+                opus_model: todo!(),
+                sonnet_model: todo!(),
+                haiku_model: todo!(),
+                // retry_count: Some(3),
             };
             repository.create_claude_provider(&request).await.unwrap();
         }
@@ -96,8 +106,9 @@ fn bench_paginated_query(c: &mut Criterion) {
     c.bench_function("paginated_query", |b| {
         b.to_async(&rt).iter(|| async {
             let params = PaginationParams {
-                page: black_box(5), // 查询第5页
-                limit: black_box(20),
+                page: black_box(Some(5)), // 查询第5页
+                limit: black_box(Some(20)),
+                offset: todo!(),
             };
             
             let result = repository.paginate::<ClaudeProvider>(&params).await;
@@ -120,13 +131,18 @@ fn bench_search_query(c: &mut Criterion) {
                 name: format!("{} Provider {}", term, i),
                 url: "https://api.openai.com".to_string(),
                 token: format!("sk-search-token-{}", i),
-                max_tokens: Some(4096),
-                temperature: Some(0.7),
-                model: Some("gpt-4".to_string()),
-                enabled: Some(1),
-                description: Some(format!("Search test provider {} with term {}", i, term)),
+                // max_tokens: Some(4096),
+                // temperature: Some(0.7),
+                // model: Some("gpt-4".to_string()),
+                // enabled: Some(1),
+                // description: Some(format!("Search test provider {} with term {}", i, term)),
                 timeout: Some(30),
-                retry_count: Some(3),
+                auto_update: todo!(),
+                r#type: todo!(),
+                opus_model: todo!(),
+                sonnet_model: todo!(),
+                haiku_model: todo!(),
+                // retry_count: Some(3),
             };
             repository.create_claude_provider(&request).await.unwrap();
         }
@@ -156,7 +172,7 @@ fn bench_connection_pool(c: &mut Criterion) {
                 let handle = tokio::spawn(async move {
                     // 执行简单查询
                     let result = sqlx::query("SELECT 1")
-                        .fetch_one(&db.pool)
+                        .fetch_one(db.pool())
                         .await;
                     black_box(result)
                 });
@@ -176,7 +192,7 @@ fn bench_transaction_performance(c: &mut Criterion) {
     
     c.bench_function("transaction_batch_insert", |b| {
         b.to_async(&rt).iter(|| async {
-            let mut tx = db_manager.pool.begin().await.unwrap();
+            let mut tx = db_manager.pool().begin().await.unwrap();
             
             // 在事务中插入10条记录
             for i in 0..10 {
@@ -207,15 +223,20 @@ fn bench_complex_query(c: &mut Criterion) {
         for i in 0..200 {
             let request = CreateClaudeProviderRequest {
                 name: format!("Complex Provider {}", i),
-                url: if i % 3 == 0 { "https://api.openai.com" } else { "https://api.anthropic.com" },
+                url: if i % 3 == 0 { "https://api.openai.com".to_string() } else { "https://api.anthropic.com".to_string() },
                 token: format!("sk-complex-token-{}", i),
-                max_tokens: Some(1024 * (i % 4 + 1)),
-                temperature: Some(0.1 * (i % 10) as f64),
-                model: Some(if i % 2 == 0 { "gpt-4" } else { "gpt-3.5-turbo" }),
-                enabled: Some(if i % 4 == 0 { 1 } else { 0 }),
-                description: Some(format!("Complex query test provider {}", i)),
+                // max_tokens: Some(1024 * (i % 4 + 1)),
+                // temperature: Some(0.1 * (i % 10) as f64),
+                // model: Some(if i % 2 == 0 { "gpt-4" } else { "gpt-3.5-turbo" }),
+                // enabled: Some(if i % 4 == 0 { 1 } else { 0 }),
+                // description: Some(format!("Complex query test provider {}", i)),
                 timeout: Some(10 + i % 50),
-                retry_count: Some(i % 5),
+                auto_update: todo!(),
+                r#type: todo!(),
+                opus_model: todo!(),
+                sonnet_model: todo!(),
+                haiku_model: todo!(),
+                // retry_count: Some(i % 5),
             };
             repository.create_claude_provider(&request).await.unwrap();
         }
@@ -224,8 +245,7 @@ fn bench_complex_query(c: &mut Criterion) {
     c.bench_function("complex_query", |b| {
         b.to_async(&rt).iter(|| async {
             // 执行复杂查询：查找启用的、token长度>15的、按创建时间排序
-            let query = sqlx::query_as!(
-                ClaudeProvider,
+            let result = sqlx::query_as::<_, ClaudeProvider>(
                 r#"
                 SELECT id, name, url, token, max_tokens, temperature, model, 
                        enabled, description, timeout, retry_count, created_at, updated_at
@@ -234,9 +254,9 @@ fn bench_complex_query(c: &mut Criterion) {
                 ORDER BY created_at DESC
                 LIMIT 20
                 "#
-            );
-            
-            let result = query.fetch_all(&repository.db_manager.pool).await;
+            )
+            .fetch_all(&repository.pool)
+            .await;
             black_box(result)
         });
     });
@@ -250,12 +270,12 @@ fn bench_indexed_query(c: &mut Criterion) {
     // 创建索引
     rt.block_on(async {
         sqlx::query("CREATE INDEX IF NOT EXISTS idx_claude_providers_enabled ON claude_providers(enabled)")
-            .execute(&repository.db_manager.pool)
+            .execute(&repository.pool)
             .await
             .unwrap();
         
         sqlx::query("CREATE INDEX IF NOT EXISTS idx_claude_providers_name ON claude_providers(name)")
-            .execute(&repository.db_manager.pool)
+            .execute(&repository.pool)
             .await
             .unwrap();
     });
@@ -267,13 +287,18 @@ fn bench_indexed_query(c: &mut Criterion) {
                 name: format!("Indexed Provider {}", i),
                 url: "https://api.openai.com".to_string(),
                 token: format!("sk-indexed-token-{}", i),
-                max_tokens: Some(4096),
-                temperature: Some(0.7),
-                model: Some("gpt-4".to_string()),
-                enabled: Some(if i % 10 == 0 { 1 } else { 0 }), // 10%启用
-                description: Some(format!("Indexed query test provider {}", i)),
+                // max_tokens: Some(4096),
+                // temperature: Some(0.7),
+                // model: Some("gpt-4".to_string()),
+                // enabled: Some(if i % 10 == 0 { 1 } else { 0 }), // 10%启用
+                // description: Some(format!("Indexed query test provider {}", i)),
                 timeout: Some(30),
-                retry_count: Some(3),
+                auto_update: todo!(),
+                r#type: todo!(),
+                opus_model: todo!(),
+                sonnet_model: todo!(),
+                haiku_model: todo!(),
+                // retry_count: Some(3),
             };
             repository.create_claude_provider(&request).await.unwrap();
         }
