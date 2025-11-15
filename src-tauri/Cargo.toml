@@ -15,6 +15,10 @@ path = "src/main.rs"
 name = "api_server"
 path = "src/bin/api_server.rs"
 
+[[bin]]
+name = "data_compatibility_test"
+path = "tests/bin/data_compatibility_test.rs"
+
 [lib]
 name = "migration_ai_manager_lib"
 path = "src/lib.rs"
@@ -50,8 +54,26 @@ clap = { version = "4.0", features = ["derive"] }
 [dev-dependencies]
 reqwest = { version = "0.11", features = ["json"] }
 tokio-test = "0.4"
+tempfile = "3.0"
+serial_test = "2.0"
+
+# 性能基准测试依赖
+criterion = { version = "0.5", features = ["html_reports"] }
+futures = "0.3"
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem
 # DO NOT REMOVE!!
 custom-protocol = ["tauri/custom-protocol"]
+
+[[bench]]
+name = "api_performance"
+harness = false
+
+[[bench]]
+name = "database_performance"
+harness = false
+
+[[bench]]
+name = "crypto_performance"
+harness = false
