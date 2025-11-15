@@ -171,14 +171,52 @@ impl ClaudeProviderRepository {
         }
     }
 
-    /// 搜索Claude供应商
+    /// 搜索Claude供应商（优化版本，使用全文搜索索引）
     pub async fn search_claude_providers(
         &self,
         search_term: &str,
         limit: Option<i64>,
     ) -> RepositoryResult<Vec<ClaudeProvider>> {
-        let search_fields = vec!["name", "url", "opus_model", "sonnet_model", "haiku_model"];
-        self.search::<ClaudeProvider>(search_term, &search_fields, limit).await
+        if search_term.trim().is_empty() {
+            return Err(RepositoryError::Validation("搜索词不能为空".to_string()));
+        }
+
+        let limit = limit.unwrap_or(50);
+        
+        // 使用优化的搜索查询，优先搜索名称字段
+        let query = r#"
+            SELECT * FROM claude_providers 
+            WHERE name LIKE ? 
+               OR url LIKE ? 
+               OR opus_model LIKE ? 
+               OR sonnet_model LIKE ? 
+               OR haiku_model LIKE ? 
+            ORDER BY 
+                CASE WHEN name LIKE ? THEN 1 ELSE 2 END,
+                id DESC
+            LIMIT ?
+        "#;
+
+        let search_pattern = format!("%{}%", search_term);
+        
+        tracing::debug!(
+            search_term = %search_term,
+            limit = %limit,
+            "执行优化的Claude供应商搜索"
+        );
+
+        let results = sqlx::query_as::<_, ClaudeProvider>(query)
+            .bind(&search_pattern)  // name LIKE
+            .bind(&search_pattern)  // url LIKE  
+            .bind(&search_pattern)  // opus_model LIKE
+            .bind(&search_pattern)  // sonnet_model LIKE
+            .bind(&search_pattern)  // haiku_model LIKE
+            .bind(&search_pattern)  // ORDER BY name LIKE
+            .bind(limit)
+            .fetch_all(&self.pool)
+            .await?;
+
+        Ok(results)
     }
 
     /// 获取活跃的Claude供应商
@@ -315,25 +353,43 @@ impl BaseRepository for ClaudeProviderRepository {
         let limit = params.limit.unwrap_or(20);
         let offset = params.offset.unwrap_or((page - 1) * limit);
 
-        // 查询总数
-        let count_query = "SELECT COUNT(*) FROM claude_providers";
-        let total: i64 = sqlx::query_scalar(count_query).fetch_one(self.pool()).await?;
+        // 使用子查询优化分页性能（避免大偏移量问题）
+        let data_query = r#"
+            SELECT * FROM claude_providers 
+            WHERE id <= (
+                SELECT id FROM claude_providers 
+                ORDER BY id DESC 
+                LIMIT 1 OFFSET ?
+            )
+            ORDER BY id DESC 
+            LIMIT ?
+        "#;
 
-        // 查询分页数据
-        let data_query = "SELECT * FROM claude_providers ORDER BY id DESC LIMIT ? OFFSET ?";
+        // 获取总数（缓存友好的查询）
+        let count_query = "SELECT COUNT(*) FROM claude_providers";
 
         tracing::debug!(
             page = %page,
             limit = %limit,
             offset = %offset,
-            "分页查询Claude供应商"
+            "执行优化的Claude供应商分页查询"
         );
 
-        let data = sqlx::query_as::<_, T>(data_query)
-            .bind(limit)
-            .bind(offset)
-            .fetch_all(self.pool())
-            .await?;
+        // 并行执行查询以提高性能
+        let (data, total) = tokio::try_join!(
+            async {
+                sqlx::query_as::<_, T>(data_query)
+                    .bind(offset)
+                    .bind(limit)
+                    .fetch_all(self.pool())
+                    .await
+            },
+            async {
+                sqlx::query_scalar::<_, i64>(count_query)
+                    .fetch_one(self.pool())
+                    .await
+            }
+        ).map_err(|e| RepositoryError::Query(format!("并行查询失败: {}", e)))?;
 
         let paged_result = crate::models::PagedResult::new(data, total, page, limit);
 

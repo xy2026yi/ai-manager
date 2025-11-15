@@ -31,6 +31,9 @@ pub enum RepositoryError {
     #[error("验证失败: {0}")]
     Validation(String),
 
+    #[error("查询错误: {0}")]
+    Query(String),
+
     #[error("序列化错误: {0}")]
     Serialization(#[from] serde_json::Error),
 }

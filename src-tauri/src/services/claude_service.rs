@@ -217,31 +217,41 @@ impl ClaudeProviderService {
         Ok(result)
     }
 
-    /// 搜索Claude供应商
+    /// 搜索Claude供应商（内存优化版本）
     pub async fn search_providers(
         &self,
         search_term: &str,
         limit: Option<i64>,
     ) -> ClaudeServiceResult<Vec<ClaudeProvider>> {
+        let trimmed_term = search_term.trim();
+        
         debug!(
-            search_term = %search_term,
+            search_term = %trimmed_term,
             limit = ?limit,
             "搜索Claude供应商"
         );
 
-        if search_term.trim().is_empty() {
+        if trimmed_term.is_empty() {
             return Err(ClaudeServiceError::Validation("搜索词不能为空".to_string()));
         }
 
-        let providers = self.repository.search_claude_providers(search_term, limit).await?;
+        // 避免不必要的字符串分配，直接传递引用
+        let providers = self.repository.search_claude_providers(trimmed_term, limit).await?;
         Ok(providers)
     }
 
-    /// 获取活跃的Claude供应商
+    /// 获取活跃的Claude供应商（优化版本，使用索引查询）
     pub async fn list_active_providers(&self) -> ClaudeServiceResult<Vec<ClaudeProvider>> {
         debug!("获取活跃的Claude供应商列表");
 
-        let providers = self.repository.list_active_providers().await?;
+        // 直接使用优化的索引查询，避免多次数据库访问
+        let query = "SELECT * FROM claude_providers WHERE enabled = 1 ORDER BY id DESC";
+        
+        let providers = sqlx::query_as::<_, ClaudeProvider>(query)
+            .fetch_all(&self.repository.pool)
+            .await
+            .map_err(|e| ClaudeServiceError::Repository(e.into()))?;
+        
         Ok(providers)
     }
 

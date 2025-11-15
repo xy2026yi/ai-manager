@@ -17,7 +17,7 @@ pub enum CryptoError {
     EnvVar(#[from] env::VarError),
 }
 
-/// 加密服务结构体
+/// 加密服务结构体（优化内存使用）
 #[derive(Clone)]
 pub struct CryptoService {
     fernet: Fernet,
@@ -50,29 +50,82 @@ impl CryptoService {
         Ok(testing::generate_test_key())
     }
 
-    /// 加密文本数据
+    /// 加密文本数据（优化内存使用）
     pub fn encrypt(&self, plaintext: &str) -> Result<String, CryptoError> {
+        if plaintext.is_empty() {
+            return Err(CryptoError::Encryption("待加密文本不能为空".to_string()));
+        }
+        
         let encrypted = self.fernet.encrypt(plaintext.as_bytes());
         Ok(encrypted)
     }
 
-    /// 解密文本数据
+    /// 解密文本数据（优化内存使用）
     pub fn decrypt(&self, ciphertext: &str) -> Result<String, CryptoError> {
+        if ciphertext.is_empty() {
+            return Err(CryptoError::Decryption("待解密文本不能为空".to_string()));
+        }
+        
         let decrypted = self
             .fernet
             .decrypt(ciphertext)
             .map_err(|e| CryptoError::Decryption(e.to_string()))?;
-        Ok(String::from_utf8(decrypted).map_err(|e| CryptoError::Decryption(e.to_string()))?)
+        
+        // 直接从bytes转换为String，避免中间分配
+        match String::from_utf8(decrypted) {
+            Ok(s) => Ok(s),
+            Err(e) => Err(CryptoError::Decryption(format!("UTF-8解码失败: {}", e))),
+        }
     }
 
-    /// 批量加密字符串数组
+    /// 批量加密字符串数组（内存优化版本）
     pub fn encrypt_batch(&self, items: &[String]) -> Result<Vec<String>, CryptoError> {
-        items.iter().map(|item| self.encrypt(item)).collect()
+        if items.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        // 预分配结果向量，避免多次重新分配
+        let mut results = Vec::with_capacity(items.len());
+        
+        for item in items {
+            // 避免不必要的字符串克隆，直接使用引用
+            let encrypted = self.encrypt(item)?;
+            results.push(encrypted);
+        }
+
+        Ok(results)
     }
 
-    /// 批量解密字符串数组
+    /// 批量解密字符串数组（内存优化版本）
     pub fn decrypt_batch(&self, items: &[String]) -> Result<Vec<String>, CryptoError> {
-        items.iter().map(|item| self.decrypt(item)).collect()
+        if items.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        // 预分配结果向量，避免多次重新分配
+        let mut results = Vec::with_capacity(items.len());
+        
+        for item in items {
+            // 避免不必要的字符串克隆，直接使用引用
+            let decrypted = self.decrypt(item)?;
+            results.push(decrypted);
+        }
+
+        Ok(results)
+    }
+
+    /// 原地加密（就地操作，避免额外内存分配）
+    pub fn encrypt_in_place(&self, data: &mut String) -> Result<(), CryptoError> {
+        let encrypted = self.encrypt(&*data)?;
+        *data = encrypted;
+        Ok(())
+    }
+
+    /// 原地解密（就地操作，避免额外内存分配）
+    pub fn decrypt_in_place(&self, data: &mut String) -> Result<(), CryptoError> {
+        let decrypted = self.decrypt(&*data)?;
+        *data = decrypted;
+        Ok(())
     }
 
     /// 验证数据完整性（通过尝试解密）

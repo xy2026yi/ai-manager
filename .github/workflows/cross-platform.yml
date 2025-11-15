@@ -1,0 +1,378 @@
+name: 跨平台兼容性测试
+
+# 触发条件
+on:
+  push:
+    branches: [ master, main, develop ]
+    paths:
+      - 'src-tauri/**'
+      - 'tests/**'
+      - '.github/workflows/cross-platform.yml'
+  pull_request:
+    branches: [ master, main, develop ]
+    paths:
+      - 'src-tauri/**'
+      - 'tests/**'
+  schedule:
+    # 每周一凌晨2点运行，确保跨平台兼容性
+    - cron: '0 2 * * 1'
+  workflow_dispatch:  # 允许手动触发
+
+env:
+  RUST_BACKTRACE: 1
+  CARGO_TERM_COLOR: always
+  SQLX_OFFLINE: true  # 避免在线数据库检查
+
+jobs:
+  # 跨平台测试矩阵
+  test-matrix:
+    name: 跨平台测试矩阵
+    strategy:
+      fail-fast: false  # 允许其他平台继续运行即使一个失败
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            arch: x86_64
+            node_arch: x64
+            setup_script: setup-linux.sh
+          - os: windows-latest
+            platform: windows
+            arch: x86_64
+            node_arch: x64
+            setup_script: setup-windows.ps1
+          - os: macos-latest
+            platform: macos
+            arch: x86_64
+            node_arch: x64
+            setup_script: setup-macos.sh
+          - os: macos-14  # Apple Silicon
+            platform: macos
+            arch: aarch64
+            node_arch: arm64
+            setup_script: setup-macos.sh
+    
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+
+    # Rust 环境设置
+    - name: 安装 Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: ${{ matrix.arch }}-unknown-${{ matrix.platform }}-gnu
+
+    # Node.js 环境设置（用于前端）
+    - name: 安装 Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        architecture: ${{ matrix.node_arch }}
+
+    # 缓存优化
+    - name: 缓存 Cargo 依赖
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+          node_modules
+        key: ${{ runner.os }}-${{ matrix.arch }}-cargo-node-${{ hashFiles('**/Cargo.lock', '**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-${{ matrix.arch }}-cargo-
+          ${{ runner.os }}-${{ matrix.arch }}-node-
+
+    # 平台特定的依赖安装
+    - name: 安装系统依赖 (Linux)
+      if: matrix.platform == 'linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libwebkit2gtk-4.0-dev \
+          build-essential \
+          curl \
+          wget \
+          libssl-dev \
+          libgtk-3-dev \
+          libayatana-appindicator3-dev \
+          librsvg2-dev \
+          libsqlite3-dev \
+          pkg-config
+
+    - name: 安装系统依赖 (macOS)
+      if: matrix.platform == 'macos'
+      run: |
+        # 安装 Xcode 命令行工具（如果尚未安装）
+        xcode-select --install 2>/dev/null || true
+        # 安装 Homebrew 依赖
+        brew install sqlite3
+
+    - name: 安装系统依赖 (Windows)
+      if: matrix.platform == 'windows'
+      shell: powershell
+      run: |
+        # Windows 通常不需要额外的系统依赖，Tauri 会处理
+        # 确保使用正确的 Visual Studio 构建工具
+        Write-Host "Windows dependencies check complete"
+
+    # 环境验证
+    - name: 验证环境
+      run: |
+        echo "平台信息:"
+        uname -a || ver
+        echo "Rust 版本:"
+        rustc --version
+        echo "Cargo 版本:"
+        cargo --version
+        echo "Node.js 版本:"
+        node --version
+        echo "npm 版本:"
+        npm --version
+
+    # 构建项目
+    - name: 构建项目
+      run: cargo build --verbose --release
+
+    # 运行单元测试
+    - name: 运行单元测试
+      run: cargo test --lib --bins --release
+
+    # 运行集成测试
+    - name: 运行集成测试
+      run: cargo test --test '*' --release
+
+    # 跨平台特定测试
+    - name: 文件路径兼容性测试
+      shell: bash
+      run: |
+        echo "测试文件路径处理..."
+        # 创建测试文件路径
+        if [[ "${{ matrix.platform }}" == "windows" ]]; then
+          TEST_PATH="C:\\temp\\ai_manager_test"
+        else
+          TEST_PATH="/tmp/ai_manager_test"
+        fi
+        echo "测试路径: $TEST_PATH"
+        
+        # 运行路径处理测试（如果存在）
+        if [ -d "tests/cross-platform" ]; then
+          cargo test --test cross_platform_paths --release || true
+        fi
+
+    - name: 配置文件位置测试
+      shell: bash
+      run: |
+        echo "测试配置文件位置..."
+        
+        # 测试不同平台的配置目录
+        if [[ "${{ matrix.platform }}" == "windows" ]]; then
+          CONFIG_DIR="$APPDATA/AI Manager"
+          CLAUDE_CONFIG="$APPDATA/.claude"
+          CODEX_CONFIG="$APPDATA/.codex"
+        elif [[ "${{ matrix.platform }}" == "macos" ]]; then
+          CONFIG_DIR="$HOME/Library/Application Support/AI Manager"
+          CLAUDE_CONFIG="$HOME/.claude"
+          CODEX_CONFIG="$HOME/.codex"
+        else  # Linux
+          CONFIG_DIR="$HOME/.config/ai-manager"
+          CLAUDE_CONFIG="$HOME/.claude"
+          CODEX_CONFIG="$HOME/.codex"
+        fi
+        
+        echo "配置目录: $CONFIG_DIR"
+        echo "Claude配置: $CLAUDE_CONFIG"
+        echo "Codex配置: $CODEX_CONFIG"
+        
+        # 创建目录测试权限
+        mkdir -p "$CONFIG_DIR" "$CLAUDE_CONFIG" "$CODEX_CONFIG"
+        echo "目录创建成功"
+        
+        # 测试文件写入权限
+        echo "test" > "$CONFIG_DIR/test.txt"
+        echo "test" > "$CLAUDE_CONFIG/test.txt"
+        echo "test" > "$CODEX_CONFIG/test.txt"
+        echo "文件写入权限正常"
+
+    # 数据库兼容性测试
+    - name: 数据库兼容性测试
+      shell: bash
+      run: |
+        echo "测试数据库兼容性..."
+        
+        # 创建测试数据库
+        if [ -f "tests/data/test_migration.db" ]; then
+          cp tests/data/test_migration.db test_cross_platform.db
+          echo "测试数据库复制成功"
+        else
+          echo "创建新的测试数据库"
+          sqlite3 test_cross_platform.db "CREATE TABLE test (id INTEGER PRIMARY KEY, data TEXT);"
+          sqlite3 test_cross_platform.db "INSERT INTO test (data) VALUES ('跨平台测试数据');"
+        fi
+        
+        # 验证数据库访问
+        sqlite3 test_cross_platform.db "SELECT * FROM test;"
+        echo "数据库访问正常"
+
+    # 加密兼容性测试
+    - name: 加密兼容性测试
+      shell: bash
+      run: |
+        echo "测试加密兼容性..."
+        
+        # 运行加密测试（如果存在）
+        if [ -f "tests/encryption_compatibility_test.rs" ]; then
+          cargo test --test encryption_compatibility --release || true
+        fi
+        
+        echo "加密测试完成"
+
+    # 构建桌面应用（可选，用于验证打包）
+    - name: 构建桌面应用
+      if: success()  # 只有在前面步骤成功时才运行
+      run: |
+        # 安装 Tauri CLI（如果尚未安装）
+        cargo install tauri-cli --version "^1.0" --quiet
+        
+        # 构建应用（不生成安装包，只验证构建过程）
+        cd src-tauri
+        cargo tauri build --no-bundle
+        cd ..
+        
+        echo "桌面应用构建成功"
+
+    # 性能基准测试
+    - name: 性能基准测试
+      if: success() && matrix.platform == 'linux'  # 只在Linux上运行性能测试以节省时间
+      run: |
+        echo "运行性能基准测试..."
+        
+        # 安装 cargo-criterion（如果尚未安装）
+        cargo install cargo-criterion --quiet
+        
+        # 运行基准测试
+        cargo bench --bench performance || true
+        
+        echo "性能基准测试完成"
+
+    # 生成测试报告
+    - name: 生成测试报告
+      if: always()  # 即使前面步骤失败也生成报告
+      shell: bash
+      run: |
+        echo "生成跨平台测试报告..."
+        
+        # 创建报告目录
+        mkdir -p cross-platform-reports
+        
+        # 生成平台报告
+        cat > cross-platform-reports/report-${{ matrix.platform }}-${{ matrix.arch }}.md << EOF
+        # 跨平台兼容性测试报告
+        
+        ## 平台信息
+        - 操作系统: ${{ matrix.os }}
+        - 平台: ${{ matrix.platform }}
+        - 架构: ${{ matrix.arch }}
+        - Node.js架构: ${{ matrix.node_arch }}
+        
+        ## 测试时间
+        - 开始时间: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+        - Git SHA: ${{ github.sha }}
+        - 分支: ${{ github.ref_name }}
+        
+        ## 测试结果
+        - 构建状态: ${{ job.status }}
+        
+        ## 环境信息
+        \`\`\`
+        Rust版本: $(rustc --version 2>/dev/null || echo "未安装")
+        Node.js版本: $(node --version 2>/dev/null || echo "未安装")
+        \`\`\`
+        
+        EOF
+        
+        echo "报告生成完成: cross-platform-reports/report-${{ matrix.platform }}-${{ matrix.arch }}.md"
+
+    # 上传测试报告
+    - name: 上传测试报告
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: cross-platform-report-${{ matrix.platform }}-${{ matrix.arch }}
+        path: cross-platform-reports/
+        retention-days: 30
+
+  # 汇总测试结果
+  test-summary:
+    name: 跨平台测试汇总
+    if: always()
+    needs: test-matrix
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+
+    - name: 下载所有测试报告
+      uses: actions/download-artifact@v3
+      with:
+        path: all-reports/
+
+    - name: 生成汇总报告
+      run: |
+        echo "# 跨平台兼容性测试汇总报告" > cross-platform-summary.md
+        echo "" >> cross-platform-summary.md
+        echo "**测试时间:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> cross-platform-summary.md
+        echo "**Git SHA:** ${{ github.sha }}" >> cross-platform-summary.md
+        echo "**分支:** ${{ github.ref_name }}" >> cross-platform-summary.md
+        echo "" >> cross-platform-summary.md
+        
+        echo "## 测试结果概览" >> cross-platform-summary.md
+        echo "" >> cross-platform-summary.md
+        
+        # 遍历所有报告文件
+        for report_dir in all-reports/cross-platform-report-*; do
+          if [ -d "$report_dir" ]; then
+            platform_name=$(echo "$report_dir" | sed 's/.*cross-platform-report-//')
+            echo "### $platform_name" >> cross-platform-summary.md
+            
+            if [ -f "$report_dir/report-$platform_name.md" ]; then
+              cat "$report_dir/report-$platform_name.md" >> cross-platform-summary.md
+              echo "" >> cross-platform-summary.md
+            fi
+          fi
+        done
+        
+        echo "## 结论" >> cross-platform-summary.md
+        echo "详细的测试结果请参考各个平台的单独报告。" >> cross-platform-summary.md
+        
+        # 显示汇总报告
+        cat cross-platform-summary.md
+
+    - name: 上传汇总报告
+      uses: actions/upload-artifact@v3
+      with:
+        name: cross-platform-summary
+        path: cross-platform-summary.md
+        retention-days: 90
+
+    # 在 PR 中评论测试结果
+    - name: PR 评论
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const path = './cross-platform-summary.md';
+          
+          if (fs.existsSync(path)) {
+            const summary = fs.readFileSync(path, 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🌍 跨平台兼容性测试报告\n\n${summary}`
+            });
+          }

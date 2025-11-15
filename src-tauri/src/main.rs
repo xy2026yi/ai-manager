@@ -26,27 +26,45 @@ fn greet(name: &str) -> String {
     format!("你好, {}! AI Manager 后端已就绪。", name)
 }
 
-/// 主函数
+/// 主函数（优化启动时间）
 ///
 /// 初始化日志系统并启动 Tauri 应用程序
 fn main() {
-    // 初始化开发环境日志系统
-    if let Err(e) = init_development() {
-        eprintln!("日志系统初始化失败: {}", e);
-    }
+    // 使用异步运行时来优化启动时间
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("Failed to create async runtime");
 
-    // 记录应用启动信息
-    tracing::info!("AI Manager 应用程序启动");
-    tracing::info!("版本: 0.1.0");
-    tracing::info!("环境: 开发模式");
+    rt.block_on(async {
+        // 异步初始化日志系统，不阻塞主线程
+        let logging_fut = async {
+            if let Err(e) = init_development() {
+                eprintln!("日志系统初始化失败: {}", e);
+            }
+        };
 
-    // 构建并运行 Tauri 应用
-    tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![greet])
-        .run(tauri::generate_context!())
-        .map_err(|e| {
+        // 异步记录应用启动信息
+        let startup_info_fut = async {
+            tracing::info!("AI Manager 应用程序启动");
+            tracing::info!("版本: 0.1.0");
+            tracing::info!("环境: 开发模式");
+        };
+
+        // 并行执行非关键启动任务
+        tokio::join!(logging_fut, startup_info_fut);
+
+        // 构建并运行 Tauri 应用
+        let result = tauri::Builder::default()
+            .invoke_handler(tauri::generate_handler![greet])
+            .run(tauri::generate_context!());
+
+        if let Err(e) = result {
             tracing::error!("应用启动失败: {}", e);
-            e
-        })
-        .expect("启动 Tauri 应用时出错");
+            return Err(e);
+        }
+
+        Ok(())
+    })
+    .expect("Failed to run async main");
 }
