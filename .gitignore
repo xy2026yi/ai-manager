@@ -77,6 +77,11 @@ Thumbs.db
 # 项目特定
 ai_manager.db
 
+# 归档和备份数据
+archived_data/
+backup/
+*.bak
+
 # Frontend
 dist/
 build/
