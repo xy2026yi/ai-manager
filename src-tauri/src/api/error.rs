@@ -248,3 +248,9 @@ impl From<serde_json::Error> for ApiError {
         ApiError::BadRequest { message: format!("数据格式错误: {}", err) }
     }
 }
+
+impl From<crate::ValidationError> for ApiError {
+    fn from(err: crate::ValidationError) -> Self {
+        ApiError::Validation(err.to_string())
+    }
+}

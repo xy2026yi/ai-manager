@@ -9,6 +9,7 @@ use crate::models::{
     UpdateCodexProviderRequest,
 };
 use crate::repositories::{BaseRepository, CodexProviderRepository};
+use crate::{Validator, ValidationError};
 use std::sync::Arc;
 use tracing::{debug, error, info, warn};
 
@@ -32,6 +33,12 @@ pub enum CodexServiceError {
 
     #[error("没有启用的供应商")]
     NoActiveProvider,
+}
+
+impl From<ValidationError> for CodexServiceError {
+    fn from(error: ValidationError) -> Self {
+        CodexServiceError::Validation(error.to_string())
+    }
 }
 
 /// Codex供应商服务结果类型
@@ -95,9 +102,7 @@ impl CodexProviderService {
             "获取Codex供应商"
         );
 
-        if id <= 0 {
-            return Err(CodexServiceError::Validation("无效的供应商ID".to_string()));
-        }
+        Validator::validate_id(id, "id")?;
 
         let provider = self.repository.find_by_id_decrypted(id).await?;
         Ok(provider)
@@ -114,9 +119,7 @@ impl CodexProviderService {
             "更新Codex供应商业务逻辑开始"
         );
 
-        if id <= 0 {
-            return Err(CodexServiceError::Validation("无效的供应商ID".to_string()));
-        }
+        Validator::validate_id(id, "id")?;
 
         // 验证请求
         self.validate_update_request(&request)?;
@@ -170,9 +173,7 @@ impl CodexProviderService {
             "删除Codex供应商业务逻辑开始"
         );
 
-        if id <= 0 {
-            return Err(CodexServiceError::Validation("无效的供应商ID".to_string()));
-        }
+        Validator::validate_id(id, "id")?;
 
         // 检查供应商是否存在
         let existing = self.repository.find_by_id::<CodexProvider>(id).await?;
@@ -229,9 +230,8 @@ impl CodexProviderService {
             "搜索Codex供应商"
         );
 
-        if search_term.trim().is_empty() {
-            return Err(CodexServiceError::Validation("搜索词不能为空".to_string()));
-        }
+        // 使用统一验证器验证搜索词
+        Validator::validate_search_term(search_term.trim())?;
 
         let providers = self.repository.search_codex_providers(search_term, limit).await?;
         Ok(providers)
@@ -279,9 +279,7 @@ impl CodexProviderService {
             "启用Codex供应商"
         );
 
-        if id <= 0 {
-            return Err(CodexServiceError::Validation("无效的供应商ID".to_string()));
-        }
+        Validator::validate_id(id, "id")?;
 
         // 检查供应商是否存在
         let provider = self.repository.find_by_id::<CodexProvider>(id).await?;
@@ -320,9 +318,7 @@ impl CodexProviderService {
             "禁用Codex供应商"
         );
 
-        if id <= 0 {
-            return Err(CodexServiceError::Validation("无效的供应商ID".to_string()));
-        }
+        Validator::validate_id(id, "id")?;
 
         // 检查供应商是否存在
         let provider = self.repository.find_by_id::<CodexProvider>(id).await?;
@@ -357,9 +353,7 @@ impl CodexProviderService {
             "测试Codex供应商连接"
         );
 
-        if id <= 0 {
-            return Err(CodexServiceError::Validation("无效的供应商ID".to_string()));
-        }
+        Validator::validate_id(id, "id")?;
 
         // 检查供应商是否存在
         let _provider = self
@@ -445,23 +439,9 @@ impl CodexProviderService {
         &self,
         request: &CreateCodexProviderRequest,
     ) -> CodexServiceResult<()> {
-        if request.name.trim().is_empty() {
-            return Err(CodexServiceError::Validation(
-                "供应商名称不能为空".to_string(),
-            ));
-        }
-
-        if request.url.trim().is_empty() {
-            return Err(CodexServiceError::Validation(
-                "供应商URL不能为空".to_string(),
-            ));
-        }
-
-        if !request.url.starts_with("http://") && !request.url.starts_with("https://") {
-            return Err(CodexServiceError::Validation(
-                "供应商URL必须以http://或https://开头".to_string(),
-            ));
-        }
+        // 使用统一验证器验证基本字段
+        Validator::validate_provider_name(&request.name)?;
+        Validator::validate_url(&request.url)?;
 
         if request.token.trim().is_empty() {
             return Err(CodexServiceError::Validation(

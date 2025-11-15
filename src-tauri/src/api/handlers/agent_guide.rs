@@ -16,6 +16,7 @@ use crate::models::{
     AgentGuide, CreateAgentGuideRequest, PaginationParams, UpdateAgentGuideRequest,
 };
 use crate::repositories::{AgentGuideRepository, BaseRepository};
+use crate::Validator;
 
 /// 重用API服务器的ApiState
 pub use super::super::server::ApiState;
@@ -31,6 +32,20 @@ pub struct AgentGuideQuery {
 }
 
 /// 创建Agent指导文件
+///
+/// # 功能描述
+/// 创建新的Agent指导文件记录，支持only和and两种类型的指导模式。
+///
+/// # 请求参数
+/// - `name`: 指导文件名称，不能为空且长度不超过200字符
+/// - `text`: 指导文件内容，不能为空且长度不超过100000字符
+/// - `type`: 指导类型，必须是"only"或"and"
+/// - `category`: 可选的分类信息
+/// - `is_active`: 是否激活状态，默认为true
+///
+/// # 响应
+/// - 成功：返回创建的Agent指导文件信息
+/// - 失败：返回相应的API错误信息
 pub async fn create_agent_guide(
     State(state): State<ApiState>,
     Json(request): Json<CreateAgentGuideRequest>,
@@ -44,14 +59,9 @@ pub async fn create_agent_guide(
     // 创建Repository
     let repository = AgentGuideRepository::new(&state.db_manager, &state.crypto_service);
 
-    // 验证请求
-    if request.name.trim().is_empty() {
-        return Err(ApiError::Validation("指导文件名称不能为空".to_string()));
-    }
-
-    if request.text.trim().is_empty() {
-        return Err(ApiError::Validation("指导文件内容不能为空".to_string()));
-    }
+    // 使用统一验证器验证请求
+    Validator::validate_agent_guide_name(&request.name)?;
+    Validator::validate_agent_guide_content(&request.text)?;
 
     if !["only", "and"].contains(&request.r#type.as_str()) {
         return Err(ApiError::Validation(
@@ -100,6 +110,16 @@ pub async fn create_agent_guide(
 }
 
 /// 获取Agent指导文件详情
+///
+/// # 功能描述
+/// 根据ID获取指定Agent指导文件的详细信息，包括解密后的内容。
+///
+/// # 路径参数
+/// - `id`: Agent指导文件的唯一标识符
+///
+/// # 响应
+/// - 成功：返回Agent指导文件的完整信息，包括名称、类型、内容等
+/// - 失败：返回相应的API错误信息（如记录不存在、无效ID等）
 pub async fn get_agent_guide(
     State(state): State<ApiState>,
     Path(id): Path<i64>,
@@ -112,7 +132,7 @@ pub async fn get_agent_guide(
     let repository = AgentGuideRepository::new(&state.db_manager, &state.crypto_service);
 
     if id <= 0 {
-        return Err(ApiError::Validation("无效的ID".to_string()));
+        Validator::validate_id(id, "id").map_err(|_| ApiError::Validation("无效的ID".to_string()))?;
     }
 
     match repository.find_by_id_decrypted(id).await {
@@ -160,7 +180,7 @@ pub async fn update_agent_guide(
     let repository = AgentGuideRepository::new(&state.db_manager, &state.crypto_service);
 
     if id <= 0 {
-        return Err(ApiError::Validation("无效的ID".to_string()));
+        Validator::validate_id(id, "id").map_err(|_| ApiError::Validation("无效的ID".to_string()))?;
     }
 
     // 检查记录是否存在
@@ -189,9 +209,7 @@ pub async fn update_agent_guide(
     }
 
     if let Some(ref text) = request.text {
-        if text.trim().is_empty() {
-            return Err(ApiError::Validation("指导文件内容不能为空".to_string()));
-        }
+        Validator::validate_agent_guide_content(text)?;
     }
 
     if let Some(ref guide_type) = request.r#type {
@@ -263,7 +281,7 @@ pub async fn delete_agent_guide(
     let repository = AgentGuideRepository::new(&state.db_manager, &state.crypto_service);
 
     if id <= 0 {
-        return Err(ApiError::Validation("无效的ID".to_string()));
+        Validator::validate_id(id, "id").map_err(|_| ApiError::Validation("无效的ID".to_string()))?;
     }
 
     // 检查记录是否存在
@@ -408,7 +426,7 @@ pub async fn validate_agent_guide(
     let repository = AgentGuideRepository::new(&state.db_manager, &state.crypto_service);
 
     if id <= 0 {
-        return Err(ApiError::Validation("无效的ID".to_string()));
+        Validator::validate_id(id, "id").map_err(|_| ApiError::Validation("无效的ID".to_string()))?;
     }
 
     match repository.validate_guide_content(id).await {

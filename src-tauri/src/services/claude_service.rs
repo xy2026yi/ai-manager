@@ -9,6 +9,7 @@ use crate::models::{
     UpdateClaudeProviderRequest,
 };
 use crate::repositories::{BaseRepository, ClaudeProviderRepository};
+use crate::{Validator, ValidationError};
 use std::sync::Arc;
 use tracing::{debug, error, info, warn};
 
@@ -32,6 +33,12 @@ pub enum ClaudeServiceError {
 
     #[error("没有启用的供应商")]
     NoActiveProvider,
+}
+
+impl From<ValidationError> for ClaudeServiceError {
+    fn from(error: ValidationError) -> Self {
+        ClaudeServiceError::Validation(error.to_string())
+    }
 }
 
 /// Claude供应商服务结果类型
@@ -95,9 +102,8 @@ impl ClaudeProviderService {
             "获取Claude供应商"
         );
 
-        if id <= 0 {
-            return Err(ClaudeServiceError::Validation("无效的供应商ID".to_string()));
-        }
+        // 使用统一验证器验证ID
+        Validator::validate_id(id, "id")?;
 
         let provider = self.repository.find_by_id_decrypted(id).await?;
         Ok(provider)
@@ -114,9 +120,8 @@ impl ClaudeProviderService {
             "更新Claude供应商业务逻辑开始"
         );
 
-        if id <= 0 {
-            return Err(ClaudeServiceError::Validation("无效的供应商ID".to_string()));
-        }
+        // 使用统一验证器验证ID
+        Validator::validate_id(id, "id")?;
 
         // 验证请求
         self.validate_update_request(&request)?;
@@ -170,9 +175,7 @@ impl ClaudeProviderService {
             "删除Claude供应商业务逻辑开始"
         );
 
-        if id <= 0 {
-            return Err(ClaudeServiceError::Validation("无效的供应商ID".to_string()));
-        }
+        Validator::validate_id(id, "id")?;
 
         // 检查供应商是否存在
         let existing = self.repository.find_by_id::<ClaudeProvider>(id).await?;
@@ -231,9 +234,8 @@ impl ClaudeProviderService {
             "搜索Claude供应商"
         );
 
-        if trimmed_term.is_empty() {
-            return Err(ClaudeServiceError::Validation("搜索词不能为空".to_string()));
-        }
+        // 使用统一验证器验证搜索词
+        Validator::validate_search_term(trimmed_term)?;
 
         // 避免不必要的字符串分配，直接传递引用
         let providers = self.repository.search_claude_providers(trimmed_term, limit).await?;
@@ -289,9 +291,7 @@ impl ClaudeProviderService {
             "启用Claude供应商"
         );
 
-        if id <= 0 {
-            return Err(ClaudeServiceError::Validation("无效的供应商ID".to_string()));
-        }
+        Validator::validate_id(id, "id")?;
 
         // 检查供应商是否存在
         let provider = self.repository.find_by_id::<ClaudeProvider>(id).await?;
@@ -335,9 +335,7 @@ impl ClaudeProviderService {
             "禁用Claude供应商"
         );
 
-        if id <= 0 {
-            return Err(ClaudeServiceError::Validation("无效的供应商ID".to_string()));
-        }
+        Validator::validate_id(id, "id")?;
 
         // 检查供应商是否存在
         let provider = self.repository.find_by_id::<ClaudeProvider>(id).await?;
@@ -377,9 +375,7 @@ impl ClaudeProviderService {
             "测试Claude供应商连接"
         );
 
-        if id <= 0 {
-            return Err(ClaudeServiceError::Validation("无效的供应商ID".to_string()));
-        }
+        Validator::validate_id(id, "id")?;
 
         // 检查供应商是否存在
         let _provider = self
@@ -470,23 +466,9 @@ impl ClaudeProviderService {
         &self,
         request: &CreateClaudeProviderRequest,
     ) -> ClaudeServiceResult<()> {
-        if request.name.trim().is_empty() {
-            return Err(ClaudeServiceError::Validation(
-                "供应商名称不能为空".to_string(),
-            ));
-        }
-
-        if request.url.trim().is_empty() {
-            return Err(ClaudeServiceError::Validation(
-                "供应商URL不能为空".to_string(),
-            ));
-        }
-
-        if !request.url.starts_with("http://") && !request.url.starts_with("https://") {
-            return Err(ClaudeServiceError::Validation(
-                "供应商URL必须以http://或https://开头".to_string(),
-            ));
-        }
+        // 使用统一验证器验证基本字段
+        Validator::validate_provider_name(&request.name)?;
+        Validator::validate_url(&request.url)?;
 
         if request.token.trim().is_empty() {
             return Err(ClaudeServiceError::Validation(

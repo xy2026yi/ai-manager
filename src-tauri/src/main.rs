@@ -5,21 +5,8 @@
 //!
 //! 从 Python/FastAPI 迁移到 Rust/Tauri 的桌面应用程序
 
-mod crypto;
-mod models;
-mod performance;
-mod python_compatibility_test;
-mod test_deps;
-
-// 导入模块
-mod api;
-mod database;
-mod logging;
-mod migration_tool;
-mod repositories;
-mod services;
-
-use logging::init_development;
+// 从 library crate 导入必要的模块
+use migration_ai_manager_lib::LoggingManager;
 use tauri::Manager;
 
 // Tauri 基础命令
@@ -32,19 +19,13 @@ fn greet(name: &str) -> String {
 ///
 /// 使用延迟初始化和并行处理来最小化启动延迟
 fn main() {
-    // 最小化的阻塞初始化
-    if let Err(e) = init_development() {
+    // 使用新的日志管理器初始化日志系统
+    if let Err(e) = LoggingManager::init_from_env() {
         eprintln!("日志系统初始化失败: {}", e);
     }
 
     tracing::info!("AI Manager 应用程序启动");
     tracing::info!("版本: 0.1.0");
-
-    // 使用单线程异步运行时以减少启动开销
-    let rt = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .expect("Failed to create async runtime");
 
     // 启动Tauri应用
     let result = tauri::Builder::default()
