@@ -32,11 +32,11 @@ impl Default for DatabaseConfig {
     fn default() -> Self {
         Self {
             url: "sqlite:data/ai_manager.db".to_string(),
-            max_connections: 20,  // 增加连接池大小以支持更高并发
-            min_connections: 2,   // 保持最小连接数
-            connect_timeout: Duration::from_secs(10), // 减少连接超时
-            idle_timeout: Duration::from_secs(300),     // 减少空闲超时
-            max_lifetime: Duration::from_secs(900),     // 减少连接最大生命周期
+            max_connections: 10,  // 优化连接池大小，减少内存占用
+            min_connections: 1,   // 最小连接数，减少资源浪费
+            connect_timeout: Duration::from_secs(5),  // 快速连接超时
+            idle_timeout: Duration::from_secs(180),   // 优化空闲超时
+            max_lifetime: Duration::from_secs(600),   // 优化连接生命周期
         }
     }
 }
@@ -67,27 +67,34 @@ impl DatabaseManager {
                 info!("✅ 数据库创建成功");
             }
 
-            // 配置优化的连接池选项
+            // 配置性能优化的连接池选项
             let pool_options = sqlx::sqlite::SqlitePoolOptions::new()
                 .max_connections(config.max_connections)
                 .min_connections(config.min_connections)
                 .idle_timeout(config.idle_timeout)
                 .max_lifetime(config.max_lifetime)
-                .acquire_timeout(Duration::from_secs(30))
-                // 启用连接池的预编译语句缓存
+                .acquire_timeout(Duration::from_secs(10)) // 减少获取连接超时
+                .test_before_acquire(true) // 连接前测试，避免使用损坏的连接
+                // 启用连接池的性能优化设置
                 .after_connect(|conn, _meta| {
                     Box::pin(async move {
-                        // 优化SQLite连接设置
+                        // SQLite性能优化设置
                         sqlx::query("PRAGMA journal_mode = WAL")
                             .execute(&mut *conn)
                             .await?;
-                        sqlx::query("PRAGMA synchronous = NORMAL")
+                        sqlx::query("PRAGMA synchronous = NORMAL") // 平衡性能和安全性
                             .execute(&mut *conn)
                             .await?;
-                        sqlx::query("PRAGMA cache_size = 10000")
+                        sqlx::query("PRAGMA cache_size = -64000") // 64MB缓存
                             .execute(&mut *conn)
                             .await?;
-                        sqlx::query("PRAGMA temp_store = MEMORY")
+                        sqlx::query("PRAGMA temp_store = MEMORY") // 临时表存储在内存
+                            .execute(&mut *conn)
+                            .await?;
+                        sqlx::query("PRAGMA mmap_size = 268435456") // 256MB内存映射
+                            .execute(&mut *conn)
+                            .await?;
+                        sqlx::query("PRAGMA optimize") // 自动优化查询计划
                             .execute(&mut *conn)
                             .await?;
                         Ok(())
@@ -108,12 +115,26 @@ impl DatabaseManager {
 
         let manager = Self { pool, config };
 
-        // 异步运行数据库迁移，不阻塞返回
+        // 异步运行数据库迁移和性能优化，不阻塞返回
         let manager_clone = manager.clone();
         tokio::spawn(async move {
+            // 运行数据库迁移
             if let Err(e) = manager_clone.run_migrations().await {
                 error!("数据库迁移失败: {}", e);
             }
+
+            // 创建性能索引
+            let query_builder = QueryBuilder::new(manager_clone.pool());
+            if let Err(e) = query_builder.create_performance_indexes().await {
+                warn!("性能索引创建失败: {}", e);
+            }
+
+            // 连接池预热：创建最小连接数，优化首次查询性能
+            if let Err(e) = manager_clone.warmup_connection_pool().await {
+                warn!("连接池预热失败: {}", e);
+            }
+
+            info!("✅ 数据库初始化和性能优化完成");
         });
 
         Ok(manager)
@@ -173,6 +194,44 @@ impl DatabaseManager {
     /// 健康检查
     pub async fn health_check(&self) -> Result<(), sqlx::Error> {
         self.pool.acquire().await?;
+        Ok(())
+    }
+
+    /// 连接池预热 - 创建最小连接数，优化首次查询性能
+    pub async fn warmup_connection_pool(&self) -> Result<(), DatabaseError> {
+        debug!("开始连接池预热");
+
+        // 并行创建多个连接以达到最小连接数
+        let pool = &self.pool;
+        let warmup_tasks: Vec<_> = (0..self.config.min_connections)
+            .map(|_| async {
+                // 直接在池上执行查询来创建和测试连接
+                sqlx::query("SELECT 1")
+                    .fetch_one(pool)
+                    .await
+                    .map_err(|e| DatabaseError::Connection(e))?;
+
+                Ok::<(), DatabaseError>(())
+            })
+            .collect();
+
+        // 等待所有预热任务完成
+        let results = futures::future::join_all(warmup_tasks).await;
+
+        let mut errors = 0;
+        for result in results {
+            if let Err(e) = result {
+                warn!("连接池预热连接失败: {}", e);
+                errors += 1;
+            }
+        }
+
+        if errors == 0 {
+            info!("✅ 连接池预热完成，{} 个连接就绪", self.config.min_connections);
+        } else {
+            warn!("⚠️ 连接池预热部分失败，{}/{} 个连接失败", errors, self.config.min_connections);
+        }
+
         Ok(())
     }
 
@@ -274,7 +333,7 @@ impl<'a> QueryBuilder<'a> {
         Ok(count)
     }
 
-    /// 执行优化的批量插入
+    /// 执行优化的批量插入（性能优化版本）
     pub async fn batch_insert(
         &self,
         table: &str,
@@ -285,21 +344,29 @@ impl<'a> QueryBuilder<'a> {
             return Ok(0);
         }
 
-        // 简化版本：逐行插入，避免复杂的参数绑定问题
-        let mut total_changes = 0;
+        // 验证数据一致性
+        let expected_cols = columns.len();
+        for (i, row) in values.iter().enumerate() {
+            if row.len() != expected_cols {
+                return Err(DatabaseError::Query(
+                    format!("第{}行数据长度({})与列数({})不匹配", i + 1, row.len(), expected_cols)
+                ));
+            }
+        }
 
         // 使用事务提高批量插入性能
         let mut tx = self.pool.begin()
             .await
-            .map_err(|e| DatabaseError::Query(e.to_string()))?;
+            .map_err(|e| DatabaseError::Query(format!("开始事务失败: {}", e)))?;
 
-        for row in values {
-            if row.len() != columns.len() {
-                return Err(DatabaseError::Query("行数据长度与列数不匹配".to_string()));
-            }
+        let mut total_changes = 0;
 
-            // 构建插入语句
-            let placeholders: Vec<String> = (0..row.len()).map(|_| "?".to_string()).collect();
+        // 批量大小优化：每批处理1000行以避免内存溢出
+        const BATCH_SIZE: usize = 1000;
+
+        for chunk in values.chunks(BATCH_SIZE) {
+            // 预编译插入语句以提高性能
+            let placeholders: Vec<String> = (0..expected_cols).map(|_| "?".to_string()).collect();
             let query_str = format!(
                 "INSERT INTO {} ({}) VALUES ({})",
                 table,
@@ -307,28 +374,27 @@ impl<'a> QueryBuilder<'a> {
                 placeholders.join(",")
             );
 
-            // 使用 fold 来链式绑定所有参数
-            let query = row.iter().fold(
-                sqlx::query(&query_str),
-                |q, value| q.bind(value)
-            );
+            // 在事务内执行查询（修复关键问题）
+            for row in chunk {
+                let query = row.iter().fold(
+                    sqlx::query(&query_str),
+                    |q, value| q.bind(value)
+                );
 
-            // 动态绑定参数
-            // let mut query = sqlx::query(&query_str);
-            // for value in &row {
-            //     query = query.bind(value);
-            // }
+                let result = query.execute(&mut *tx).await
+                    .map_err(|e| DatabaseError::Query(format!("批量插入失败: {}", e)))?;
 
-            let result = query.execute(self.pool).await
-                .map_err(|e| DatabaseError::Query(e.to_string()))?;
+                total_changes += result.rows_affected();
+            }
 
-            total_changes += result.rows_affected();
+            // 每批后短暂释放CPU，避免阻塞UI
+            tokio::task::yield_now().await;
         }
 
         // 提交事务
         tx.commit()
             .await
-            .map_err(|e| DatabaseError::Query(e.to_string()))?;
+            .map_err(|e| DatabaseError::Query(format!("提交事务失败: {}", e)))?;
 
         Ok(total_changes)
     }
