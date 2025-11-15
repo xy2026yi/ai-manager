@@ -25,9 +25,11 @@ use crate::api::server::ApiState;
 impl From<ClaudeServiceError> for ApiError {
     fn from(err: ClaudeServiceError) -> Self {
         match err {
-            ClaudeServiceError::Validation(msg) => ApiError::Validation(msg),
+            ClaudeServiceError::Validation(msg) => ApiError::validation(msg),
             ClaudeServiceError::BusinessRule(msg) => ApiError::BusinessRule { message: msg },
-            ClaudeServiceError::Repository(repo_err) => ApiError::Database { message: repo_err.to_string() },
+            ClaudeServiceError::Repository(repo_err) => {
+                ApiError::Database { message: repo_err.to_string() }
+            }
             ClaudeServiceError::ProviderNotFound(id) => {
                 ApiError::NotFound { resource: format!("供应商 {} 不存在", id) }
             }
@@ -96,7 +98,7 @@ pub async fn create_claude_provider(
             "创建Claude供应商后无法找到记录"
         );
         Err(ApiError::Internal {
-            message: "创建Claude供应商后无法找到记录".to_string(),
+            message: "创建Claude供应商后无法找到记录".to_string()
         })
     }
 }
@@ -196,7 +198,7 @@ pub async fn update_claude_provider(
             "更新Claude供应商后无法找到记录"
         );
         Err(ApiError::Internal {
-            message: "更新Claude供应商后无法找到记录".to_string(),
+            message: "更新Claude供应商后无法找到记录".to_string()
         })
     }
 }

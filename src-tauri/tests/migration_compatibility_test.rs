@@ -261,9 +261,8 @@ async fn test_data_validation_rules() {
     let mut test_data = create_sample_json_data();
 
     // 添加重复的启用供应商
-    test_data
-        .claude_providers
-        .push(migration_ai_manager_lib::migration_tool::PythonClaudeProvider {
+    test_data.claude_providers.push(
+        migration_ai_manager_lib::migration_tool::PythonClaudeProvider {
             id: None,
             name: "Duplicate Provider".to_string(),
             url: "https://api.anthropic.com".to_string(),
@@ -277,7 +276,8 @@ async fn test_data_validation_rules() {
             haiku_model: None,
             created_at: None,
             updated_at: None,
-        });
+        },
+    );
 
     let json_content = serde_json::to_string(&test_data).unwrap();
 
@@ -307,31 +307,35 @@ async fn test_data_validation_rules() {
 fn create_sample_json_data() -> PythonExportData {
     PythonExportData {
         version: "1.0.0".to_string(),
-        claude_providers: vec![migration_ai_manager_lib::migration_tool::PythonClaudeProvider {
-            id: None,
-            name: "Test Claude Provider".to_string(),
-            url: "https://api.anthropic.com".to_string(),
-            token: "sk-ant-test-key-12345".to_string(),
-            timeout: Some(30000),
-            auto_update: Some(1),
-            r#type: Some("public_welfare".to_string()),
-            enabled: Some(1),
-            opus_model: Some("claude-3-opus-20240229".to_string()),
-            sonnet_model: Some("claude-3-sonnet-20240229".to_string()),
-            haiku_model: Some("claude-3-haiku-20240307".to_string()),
-            created_at: None,
-            updated_at: None,
-        }],
-        codex_providers: vec![migration_ai_manager_lib::migration_tool::PythonCodexProvider {
-            id: None,
-            name: "Test OpenAI Provider".to_string(),
-            url: "https://api.openai.com/v1/chat/completions".to_string(),
-            token: "sk-test-openai-key-67890".to_string(),
-            r#type: Some("official".to_string()),
-            enabled: Some(0),
-            created_at: None,
-            updated_at: None,
-        }],
+        claude_providers: vec![
+            migration_ai_manager_lib::migration_tool::PythonClaudeProvider {
+                id: None,
+                name: "Test Claude Provider".to_string(),
+                url: "https://api.anthropic.com".to_string(),
+                token: "sk-ant-test-key-12345".to_string(),
+                timeout: Some(30000),
+                auto_update: Some(1),
+                r#type: Some("public_welfare".to_string()),
+                enabled: Some(1),
+                opus_model: Some("claude-3-opus-20240229".to_string()),
+                sonnet_model: Some("claude-3-sonnet-20240229".to_string()),
+                haiku_model: Some("claude-3-haiku-20240307".to_string()),
+                created_at: None,
+                updated_at: None,
+            },
+        ],
+        codex_providers: vec![
+            migration_ai_manager_lib::migration_tool::PythonCodexProvider {
+                id: None,
+                name: "Test OpenAI Provider".to_string(),
+                url: "https://api.openai.com/v1/chat/completions".to_string(),
+                token: "sk-test-openai-key-67890".to_string(),
+                r#type: Some("official".to_string()),
+                enabled: Some(0),
+                created_at: None,
+                updated_at: None,
+            },
+        ],
         agent_guides: vec![migration_ai_manager_lib::migration_tool::PythonAgentGuide {
             id: None,
             name: "测试助手".to_string(),
@@ -357,16 +361,18 @@ fn create_sample_json_data() -> PythonExportData {
             created_at: None,
             updated_at: None,
         }],
-        common_configs: vec![migration_ai_manager_lib::migration_tool::PythonCommonConfig {
-            id: None,
-            key: "test_config".to_string(),
-            value: "test_value".to_string(),
-            description: Some("测试配置".to_string()),
-            category: Some("test".to_string()),
-            is_active: Some(1),
-            created_at: None,
-            updated_at: None,
-        }],
+        common_configs: vec![
+            migration_ai_manager_lib::migration_tool::PythonCommonConfig {
+                id: None,
+                key: "test_config".to_string(),
+                value: "test_value".to_string(),
+                description: Some("测试配置".to_string()),
+                category: Some("test".to_string()),
+                is_active: Some(1),
+                created_at: None,
+                updated_at: None,
+            },
+        ],
     }
 }
 

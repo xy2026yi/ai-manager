@@ -9,7 +9,7 @@ use crate::models::{
     UpdateCodexProviderRequest,
 };
 use crate::repositories::{BaseRepository, CodexProviderRepository};
-use crate::{Validator, ValidationError};
+use crate::{ValidationError, Validator};
 use std::sync::Arc;
 use tracing::{debug, error, info, warn};
 

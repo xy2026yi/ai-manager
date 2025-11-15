@@ -46,23 +46,23 @@ pub async fn create_mcp_server(
 
     // 验证请求
     if request.name.trim().is_empty() {
-        return Err(ApiError::Validation("服务器名称不能为空".to_string()));
+        return Err(ApiError::validation("服务器名称不能为空".to_string()));
     }
 
     if request.command.trim().is_empty() {
-        return Err(ApiError::Validation("启动命令不能为空".to_string()));
+        return Err(ApiError::validation("启动命令不能为空".to_string()));
     }
 
     if let Some(timeout) = request.timeout {
         if timeout <= 0 {
-            return Err(ApiError::Validation("超时时间必须大于0".to_string()));
+            return Err(ApiError::validation("超时时间必须大于0".to_string()));
         }
     }
 
     // 验证服务器类型（如果提供）
     if let Some(ref server_type) = request.r#type {
         if !["stdio", "sse", "websocket"].contains(&server_type.as_str()) {
-            return Err(ApiError::Validation(
+            return Err(ApiError::validation(
                 "服务器类型必须是 'stdio'、'sse' 或 'websocket'".to_string(),
             ));
         }
@@ -103,7 +103,7 @@ pub async fn create_mcp_server(
             "创建MCP服务器后无法找到记录"
         );
         Err(ApiError::Internal {
-            message: "创建MCP服务器后无法找到记录".to_string(),
+            message: "创建MCP服务器后无法找到记录".to_string()
         })
     }
 }
@@ -121,7 +121,7 @@ pub async fn get_mcp_server(
     let repository = McpServerRepository::new(&state.db_manager, &state.crypto_service);
 
     if id <= 0 {
-        return Err(ApiError::Validation("无效的ID".to_string()));
+        return Err(ApiError::validation("无效的ID".to_string()));
     }
 
     match repository.find_by_id_parsed(id).await {
@@ -169,7 +169,7 @@ pub async fn update_mcp_server(
     let repository = McpServerRepository::new(&state.db_manager, &state.crypto_service);
 
     if id <= 0 {
-        return Err(ApiError::Validation("无效的ID".to_string()));
+        return Err(ApiError::validation("无效的ID".to_string()));
     }
 
     // 检查记录是否存在
@@ -193,25 +193,25 @@ pub async fn update_mcp_server(
     // 验证更新数据
     if let Some(ref name) = request.name {
         if name.trim().is_empty() {
-            return Err(ApiError::Validation("服务器名称不能为空".to_string()));
+            return Err(ApiError::validation("服务器名称不能为空".to_string()));
         }
     }
 
     if let Some(ref command) = request.command {
         if command.trim().is_empty() {
-            return Err(ApiError::Validation("启动命令不能为空".to_string()));
+            return Err(ApiError::validation("启动命令不能为空".to_string()));
         }
     }
 
     if let Some(timeout) = request.timeout {
         if timeout <= 0 {
-            return Err(ApiError::Validation("超时时间必须大于0".to_string()));
+            return Err(ApiError::validation("超时时间必须大于0".to_string()));
         }
     }
 
     if let Some(ref server_type) = request.r#type {
         if !["stdio", "sse", "websocket"].contains(&server_type.as_str()) {
-            return Err(ApiError::Validation(
+            return Err(ApiError::validation(
                 "服务器类型必须是 'stdio'、'sse' 或 'websocket'".to_string(),
             ));
         }
@@ -260,7 +260,7 @@ pub async fn update_mcp_server(
             "更新MCP服务器后无法找到记录"
         );
         Err(ApiError::Internal {
-            message: "更新MCP服务器后无法找到记录".to_string(),
+            message: "更新MCP服务器后无法找到记录".to_string()
         })
     }
 }
@@ -278,7 +278,7 @@ pub async fn delete_mcp_server(
     let repository = McpServerRepository::new(&state.db_manager, &state.crypto_service);
 
     if id <= 0 {
-        return Err(ApiError::Validation("无效的ID".to_string()));
+        return Err(ApiError::validation("无效的ID".to_string()));
     }
 
     // 检查记录是否存在
@@ -444,7 +444,7 @@ pub async fn test_mcp_server(
     let repository = McpServerRepository::new(&state.db_manager, &state.crypto_service);
 
     if id <= 0 {
-        return Err(ApiError::Validation("无效的ID".to_string()));
+        return Err(ApiError::validation("无效的ID".to_string()));
     }
 
     match repository.test_server_config(id).await {

@@ -2,12 +2,12 @@
 //!
 //! 用于监控应用程序的性能指标，包括数据库查询、内存使用、启动时间等
 
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
-use serde::{Serialize, Deserialize};
-use chrono::{DateTime, Utc, TimeZone};
 
 /// 性能指标类型
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -47,11 +47,7 @@ pub struct PerformanceMetric {
 
 impl PerformanceMetric {
     /// 创建新的性能指标
-    pub fn new(
-        metric_type: MetricType,
-        operation: impl Into<String>,
-        duration: Duration,
-    ) -> Self {
+    pub fn new(metric_type: MetricType, operation: impl Into<String>, duration: Duration) -> Self {
         Self {
             metric_type,
             operation: operation.into(),
@@ -158,12 +154,8 @@ impl PerformanceMonitor {
         // 最近100次操作的平均时间
         let recent_count = filtered.len().min(100);
         let recent_average = if recent_count > 0 {
-            let recent_duration: Duration = filtered
-                .iter()
-                .rev()
-                .take(recent_count)
-                .map(|m| m.duration)
-                .sum();
+            let recent_duration: Duration =
+                filtered.iter().rev().take(recent_count).map(|m| m.duration).sum();
             recent_duration / recent_count as u32
         } else {
             Duration::ZERO
@@ -232,11 +224,8 @@ impl PerformanceTimer {
     pub async fn finish(self) {
         let duration = self.start_time.elapsed();
         // 使用 clone 避免移动所有权
-        let metric = PerformanceMetric::new(
-            self.metric_type.clone(), 
-            self.operation.clone(), 
-            duration
-        );
+        let metric =
+            PerformanceMetric::new(self.metric_type.clone(), self.operation.clone(), duration);
         self.monitor.record_metric(metric).await;
     }
 }
@@ -244,11 +233,8 @@ impl PerformanceTimer {
 impl Drop for PerformanceTimer {
     fn drop(&mut self) {
         let duration = self.start_time.elapsed();
-        let metric = PerformanceMetric::new(
-            self.metric_type.clone(),
-            self.operation.clone(),
-            duration,
-        );
+        let metric =
+            PerformanceMetric::new(self.metric_type.clone(), self.operation.clone(), duration);
 
         // 在Drop中使用spawn避免阻塞
         let monitor = self.monitor.clone();
@@ -268,14 +254,12 @@ mod tests {
         let monitor = PerformanceMonitor::new();
 
         // 测试定时操作
-        monitor.timed_operation(
-            MetricType::DatabaseQuery,
-            "SELECT * FROM users",
-            || async {
+        monitor
+            .timed_operation(MetricType::DatabaseQuery, "SELECT * FROM users", || async {
                 sleep(Duration::from_millis(10)).await;
                 "result"
-            },
-        ).await;
+            })
+            .await;
 
         // 检查统计
         let summary = monitor.get_summary(&MetricType::DatabaseQuery).await;

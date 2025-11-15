@@ -64,7 +64,7 @@ pub async fn create_agent_guide(
     Validator::validate_agent_guide_content(&request.text)?;
 
     if !["only", "and"].contains(&request.r#type.as_str()) {
-        return Err(ApiError::Validation(
+        return Err(ApiError::validation(
             "指导文件类型必须是 'only' 或 'and'".to_string(),
         ));
     }
@@ -104,7 +104,7 @@ pub async fn create_agent_guide(
             "创建Agent指导文件后无法找到记录"
         );
         Err(ApiError::Internal {
-            message: "创建Agent指导文件后无法找到记录".to_string(),
+            message: "创建Agent指导文件后无法找到记录".to_string()
         })
     }
 }
@@ -132,7 +132,8 @@ pub async fn get_agent_guide(
     let repository = AgentGuideRepository::new(&state.db_manager, &state.crypto_service);
 
     if id <= 0 {
-        Validator::validate_id(id, "id").map_err(|_| ApiError::Validation("无效的ID".to_string()))?;
+        Validator::validate_id(id, "id")
+            .map_err(|_| ApiError::validation("无效的ID".to_string()))?;
     }
 
     match repository.find_by_id_decrypted(id).await {
@@ -180,7 +181,8 @@ pub async fn update_agent_guide(
     let repository = AgentGuideRepository::new(&state.db_manager, &state.crypto_service);
 
     if id <= 0 {
-        Validator::validate_id(id, "id").map_err(|_| ApiError::Validation("无效的ID".to_string()))?;
+        Validator::validate_id(id, "id")
+            .map_err(|_| ApiError::validation("无效的ID".to_string()))?;
     }
 
     // 检查记录是否存在
@@ -204,7 +206,7 @@ pub async fn update_agent_guide(
     // 验证更新数据
     if let Some(ref name) = request.name {
         if name.trim().is_empty() {
-            return Err(ApiError::Validation("指导文件名称不能为空".to_string()));
+            return Err(ApiError::validation("指导文件名称不能为空".to_string()));
         }
     }
 
@@ -214,7 +216,7 @@ pub async fn update_agent_guide(
 
     if let Some(ref guide_type) = request.r#type {
         if !["only", "and"].contains(&guide_type.as_str()) {
-            return Err(ApiError::Validation(
+            return Err(ApiError::validation(
                 "指导文件类型必须是 'only' 或 'and'".to_string(),
             ));
         }
@@ -263,7 +265,7 @@ pub async fn update_agent_guide(
             "更新Agent指导文件后无法找到记录"
         );
         Err(ApiError::Internal {
-            message: "更新Agent指导文件后无法找到记录".to_string(),
+            message: "更新Agent指导文件后无法找到记录".to_string()
         })
     }
 }
@@ -281,7 +283,8 @@ pub async fn delete_agent_guide(
     let repository = AgentGuideRepository::new(&state.db_manager, &state.crypto_service);
 
     if id <= 0 {
-        Validator::validate_id(id, "id").map_err(|_| ApiError::Validation("无效的ID".to_string()))?;
+        Validator::validate_id(id, "id")
+            .map_err(|_| ApiError::validation("无效的ID".to_string()))?;
     }
 
     // 检查记录是否存在
@@ -377,7 +380,9 @@ pub async fn list_agent_guides(
                 guide_type = %guide_type,
                 "根据类型获取Agent指导文件列表失败"
             );
-            ApiError::Database { message: format!("获取Agent指导文件列表失败: {}", e) }
+            ApiError::Database {
+                message: format!("获取Agent指导文件列表失败: {}", e)
+            }
         })?;
 
         // 转换为分页响应格式
@@ -401,7 +406,9 @@ pub async fn list_agent_guides(
                 error = %e,
                 "分页获取Agent指导文件列表失败"
             );
-            ApiError::Database { message: format!("获取Agent指导文件列表失败: {}", e) }
+            ApiError::Database {
+                message: format!("获取Agent指导文件列表失败: {}", e)
+            }
         })?
     };
 
@@ -426,7 +433,8 @@ pub async fn validate_agent_guide(
     let repository = AgentGuideRepository::new(&state.db_manager, &state.crypto_service);
 
     if id <= 0 {
-        Validator::validate_id(id, "id").map_err(|_| ApiError::Validation("无效的ID".to_string()))?;
+        Validator::validate_id(id, "id")
+            .map_err(|_| ApiError::validation("无效的ID".to_string()))?;
     }
 
     match repository.validate_guide_content(id).await {

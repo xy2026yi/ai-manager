@@ -2,24 +2,23 @@
 //
 // 统一执行所有数据迁移和加密兼容性测试
 
+use sqlx;
+use std::collections::HashMap;
 use std::path::Path;
 use std::time::Instant;
-use std::collections::HashMap;
 use tokio::time::Duration;
-use sqlx;
 
 use migration_ai_manager_lib::crypto::CryptoService;
 use migration_ai_manager_lib::database::{DatabaseConfig, DatabaseManager};
 
 // 导入本地测试模块
+#[path = "data_integrity_validator.rs"]
+mod data_integrity_validator;
 #[path = "migration_test_config.rs"]
 mod migration_test_config;
-#[path = "data_integrity_validator.rs"]
 
-mod data_integrity_validator;
-
-use migration_test_config::TestConfig;
 use data_integrity_validator::DataIntegrityValidator;
+use migration_test_config::TestConfig;
 
 /// 数据完整性测试结果（用于兼容性）
 #[derive(Debug, Clone)]
@@ -29,9 +28,7 @@ pub struct TestResult {
 
 impl TestResult {
     pub fn all_passed(&self) -> bool {
-        self.table_results
-            .values()
-            .all(|r| r.records_match && r.content_match)
+        self.table_results.values().all(|r| r.records_match && r.content_match)
     }
 }
 
@@ -63,13 +60,11 @@ impl EncryptionCompatibilityTester {
         Self { crypto_service }
     }
 
-    pub async fn run_comprehensive_tests(&self) -> Result<EncryptionTestResult, Box<dyn std::error::Error>> {
+    pub async fn run_comprehensive_tests(
+        &self,
+    ) -> Result<EncryptionTestResult, Box<dyn std::error::Error>> {
         // 简化的加密兼容性测试
-        let test_data = vec![
-            "test_token_1",
-            "sk-ant-api03-test",
-            "测试中文内容",
-        ];
+        let test_data = vec!["test_token_1", "sk-ant-api03-test", "测试中文内容"];
 
         let mut result = EncryptionTestResult {
             passed: true,
@@ -83,24 +78,22 @@ impl EncryptionCompatibilityTester {
         for data in test_data {
             // 往返测试
             match self.crypto_service.encrypt(data) {
-                Ok(encrypted) => {
-                    match self.crypto_service.decrypt(&encrypted) {
-                        Ok(decrypted) => {
-                            if decrypted == data {
-                                result.round_trip_passed += 1;
-                                result.format_passed += 1;
-                                result.cross_key_passed += 1;
-                            } else {
-                                result.failures.push(format!("往返测试失败: {}", data));
-                                result.passed = false;
-                            }
-                        }
-                        Err(e) => {
-                            result.failures.push(format!("解密失败: {}", e));
+                Ok(encrypted) => match self.crypto_service.decrypt(&encrypted) {
+                    Ok(decrypted) => {
+                        if decrypted == data {
+                            result.round_trip_passed += 1;
+                            result.format_passed += 1;
+                            result.cross_key_passed += 1;
+                        } else {
+                            result.failures.push(format!("往返测试失败: {}", data));
                             result.passed = false;
                         }
                     }
-                }
+                    Err(e) => {
+                        result.failures.push(format!("解密失败: {}", e));
+                        result.passed = false;
+                    }
+                },
                 Err(e) => {
                     result.failures.push(format!("加密失败: {}", e));
                     result.passed = false;
@@ -304,17 +297,14 @@ impl DataCompatibilityTestRunner {
     ) -> Result<MigrationTestResult, Box<dyn std::error::Error>> {
         // 复制原始数据库到临时位置
         if self.config.original_db_exists() {
-            std::fs::copy(
-                &self.config.original_db_path,
-                &self.config.temp_db_path,
-            )?;
+            std::fs::copy(&self.config.original_db_path, &self.config.temp_db_path)?;
         }
 
         let start_time = Instant::now();
-        
+
         // 简化的迁移测试 - 只验证数据库可访问性
         let temp_pool = self.config.create_temp_db_pool().await?;
-        
+
         // 统计记录数
         let claude_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM claude_providers")
             .fetch_one(&temp_pool)
@@ -338,9 +328,9 @@ impl DataCompatibilityTestRunner {
             .unwrap_or(0);
 
         let total_records = claude_count + codex_count + agent_count + mcp_count + config_count;
-        
+
         temp_pool.close().await;
-        
+
         let duration = start_time.elapsed();
 
         let test_result = MigrationTestResult {
@@ -370,14 +360,14 @@ impl DataCompatibilityTestRunner {
             idle_timeout: Duration::from_secs(60),
             max_lifetime: Duration::from_secs(300),
         };
-        
+
         let db_manager = DatabaseManager::new(db_config).await?;
         let validator = DataIntegrityValidator::new(db_manager);
 
         // 简化的完整性测试 - 只检查表是否存在和有数据
         let pool = self.config.create_temp_db_pool().await?;
         let mut table_results = HashMap::new();
-        
+
         let tables = vec![
             "claude_providers",
             "codex_providers",
@@ -387,15 +377,16 @@ impl DataCompatibilityTestRunner {
         ];
 
         for table in tables {
-            let count: Result<i64, _> = sqlx::query_scalar(&format!("SELECT COUNT(*) FROM {}", table))
-                .fetch_one(&pool)
-                .await;
-            
+            let count: Result<i64, _> =
+                sqlx::query_scalar(&format!("SELECT COUNT(*) FROM {}", table))
+                    .fetch_one(&pool)
+                    .await;
+
             let result = TableTestResult {
                 records_match: count.is_ok(),
                 content_match: count.unwrap_or(0) >= 0,
             };
-            
+
             table_results.insert(table.to_string(), result);
         }
 

@@ -4,15 +4,13 @@
 
 use crate::crypto::{CryptoError, CryptoService};
 use crate::database::{DatabaseManager, QueryBuilder};
-use crate::models::*;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
+use std::clone::Clone;
 use std::collections::HashMap;
 use std::path::Path;
 use thiserror::Error;
 use tracing::{debug, error, info, warn};
-use std::time::Duration;
-use std::clone::Clone;
 
 /// 迁移错误类型
 #[derive(Error, Debug)]
@@ -413,7 +411,11 @@ impl DataMigrationTool {
             VALUES (?, ?, ?)
         "#;
 
-        let params = [guide.name.as_str(), guide.r#type.as_str(), guide.text.as_str()];
+        let params = [
+            guide.name.as_str(),
+            guide.r#type.as_str(),
+            guide.text.as_str(),
+        ];
 
         QueryBuilder::new(self.db_manager.pool()).execute_raw(query, &params).await?;
 
@@ -573,7 +575,9 @@ impl DataMigrationTool {
         let rows = sqlx::query("SELECT * FROM claude_providers")
             .fetch_all(self.db_manager.pool())
             .await
-            .map_err(|e| MigrationError::Database(crate::database::DatabaseError::Query(e.to_string())))?;
+            .map_err(|e| {
+                MigrationError::Database(crate::database::DatabaseError::Query(e.to_string()))
+            })?;
 
         let mut providers = Vec::new();
         for row in rows {
@@ -614,7 +618,9 @@ impl DataMigrationTool {
         let rows = sqlx::query("SELECT * FROM codex_providers")
             .fetch_all(self.db_manager.pool())
             .await
-            .map_err(|e| MigrationError::Database(crate::database::DatabaseError::Query(e.to_string())))?;
+            .map_err(|e| {
+                MigrationError::Database(crate::database::DatabaseError::Query(e.to_string()))
+            })?;
 
         let mut providers = Vec::new();
         for row in rows {
@@ -647,7 +653,9 @@ impl DataMigrationTool {
         let rows = sqlx::query("SELECT * FROM agent_guides")
             .fetch_all(self.db_manager.pool())
             .await
-            .map_err(|e| MigrationError::Database(crate::database::DatabaseError::Query(e.to_string())))?;
+            .map_err(|e| {
+                MigrationError::Database(crate::database::DatabaseError::Query(e.to_string()))
+            })?;
 
         let mut guides = Vec::new();
         for row in rows {
@@ -672,7 +680,9 @@ impl DataMigrationTool {
         let rows = sqlx::query("SELECT * FROM mcp_servers")
             .fetch_all(self.db_manager.pool())
             .await
-            .map_err(|e| MigrationError::Database(crate::database::DatabaseError::Query(e.to_string())))?;
+            .map_err(|e| {
+                MigrationError::Database(crate::database::DatabaseError::Query(e.to_string()))
+            })?;
 
         let mut servers = Vec::new();
         for row in rows {
@@ -706,7 +716,9 @@ impl DataMigrationTool {
         let rows = sqlx::query("SELECT * FROM common_configs")
             .fetch_all(self.db_manager.pool())
             .await
-            .map_err(|e| MigrationError::Database(crate::database::DatabaseError::Query(e.to_string())))?;
+            .map_err(|e| {
+                MigrationError::Database(crate::database::DatabaseError::Query(e.to_string()))
+            })?;
 
         let mut configs = Vec::new();
         for row in rows {
@@ -730,6 +742,7 @@ impl DataMigrationTool {
 mod tests {
     use super::*;
     use crate::database::DatabaseConfig;
+    use std::time::Duration;
     use tempfile::tempdir;
 
     async fn create_test_migration_tool() -> (DataMigrationTool, DatabaseManager) {
@@ -759,7 +772,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_migration_tool_creation() {
-        let (migration_tool, _) = create_test_migration_tool().await;
+        let (_, _) = create_test_migration_tool().await;
 
         // 测试迁移工具创建成功
         assert!(true); // 如果到这里没有panic，说明创建成功

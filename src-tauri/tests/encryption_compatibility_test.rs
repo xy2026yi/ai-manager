@@ -37,7 +37,7 @@ async fn test_encrypted_token_roundtrip() {
         "test-api-key-with-special-chars-!@#$%^&*()".to_string(),
         "测试中文token".to_string(),
         "🔒🔐🔑".to_string(),
-        String::new(),               // 空token
+        String::new(),    // 空token
         "A".repeat(1000), // 长token
     ];
 
@@ -235,8 +235,8 @@ async fn test_encryption_error_handling() {
     // 测试解密无效数据
     let invalid_encrypted_data = vec![
         "invalid_encrypted_data".to_string(),
-        "gAAAA".to_string(),                    // 太短
-        "gAAAAinvaliddata".to_string(),         // 格式错误
+        "gAAAA".to_string(),                 // 太短
+        "gAAAAinvaliddata".to_string(),      // 格式错误
         format!("gAAAA{}", "A".repeat(100)), // 长度正确但内容无效
     ];
 

@@ -6,9 +6,9 @@ use crate::crypto::CryptoService;
 use crate::database::DatabaseManager;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
+use std::collections::HashMap;
 use thiserror::Error;
 use tracing::{info, warn};
-use std::collections::HashMap;
 
 /// 简化迁移错误
 #[derive(Error, Debug)]
@@ -224,7 +224,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_simple_migration_tool_creation() {
-        let migration_tool = create_test_simple_migration().await;
+        let _migration_tool = create_test_simple_migration().await;
         println!("✅ 简化版迁移工具创建测试通过");
     }
 

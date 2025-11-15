@@ -22,9 +22,7 @@ fn create_test_app() -> Router {
         .route(
             "/error",
             get(|| async {
-                ApiError::BadRequest { 
-                    message: "测试错误".to_string() 
-                }.into_response()
+                ApiError::BadRequest { message: "测试错误".to_string() }.into_response()
             }),
         )
         .layer(middleware::from_fn(global_error_handler))

@@ -43,11 +43,11 @@ pub async fn create_codex_provider(
 
     // 验证请求
     if request.name.trim().is_empty() {
-        return Err(ApiError::Validation("供应商名称不能为空".to_string()));
+        return Err(ApiError::validation("供应商名称不能为空".to_string()));
     }
 
     if request.token.trim().is_empty() {
-        return Err(ApiError::Validation("Token不能为空".to_string()));
+        return Err(ApiError::validation("Token不能为空".to_string()));
     }
 
     // 创建记录
@@ -59,7 +59,7 @@ pub async fn create_codex_provider(
         );
         match e {
             crate::services::codex_service::CodexServiceError::Validation(msg) => {
-                ApiError::Validation(msg)
+                ApiError::validation(msg)
             }
             crate::services::codex_service::CodexServiceError::BusinessRule(msg) => {
                 ApiError::BusinessRule { message: msg }
@@ -96,7 +96,7 @@ pub async fn create_codex_provider(
             "创建Codex供应商后无法找到记录"
         );
         Err(ApiError::Internal {
-            message: "创建Codex供应商后无法找到记录".to_string(),
+            message: "创建Codex供应商后无法找到记录".to_string()
         })
     }
 }
@@ -112,7 +112,7 @@ pub async fn get_codex_provider(
     );
 
     if id <= 0 {
-        return Err(ApiError::Validation("无效的ID".to_string()));
+        return Err(ApiError::validation("无效的ID".to_string()));
     }
 
     match state.codex_service.get_provider(id).await {
@@ -141,15 +141,15 @@ pub async fn get_codex_provider(
                 id = %id,
                 "获取Codex供应商详情失败"
             );
-            return Err(match e {
+            Err(match e {
                 crate::services::codex_service::CodexServiceError::Validation(msg) => {
-                    ApiError::Validation(msg)
+                    ApiError::validation(msg)
                 }
                 crate::services::codex_service::CodexServiceError::ProviderNotFound(_) => {
                     ApiError::NotFound { resource: "Codex供应商不存在".to_string() }
                 }
                 _ => ApiError::Database { message: format!("获取Codex供应商失败: {}", e) },
-            });
+            })
         }
     }
 }
@@ -166,7 +166,7 @@ pub async fn update_codex_provider(
     );
 
     if id <= 0 {
-        return Err(ApiError::Validation("无效的ID".to_string()));
+        return Err(ApiError::validation("无效的ID".to_string()));
     }
 
     // 更新记录
@@ -178,7 +178,7 @@ pub async fn update_codex_provider(
         );
         match e {
             crate::services::codex_service::CodexServiceError::Validation(msg) => {
-                ApiError::Validation(msg)
+                ApiError::validation(msg)
             }
             crate::services::codex_service::CodexServiceError::BusinessRule(msg) => {
                 ApiError::BusinessRule { message: msg }
@@ -226,7 +226,7 @@ pub async fn update_codex_provider(
             "更新Codex供应商后无法找到记录"
         );
         Err(ApiError::Internal {
-            message: "更新Codex供应商后无法找到记录".to_string(),
+            message: "更新Codex供应商后无法找到记录".to_string()
         })
     }
 }
@@ -242,7 +242,7 @@ pub async fn delete_codex_provider(
     );
 
     if id <= 0 {
-        return Err(ApiError::Validation("无效的ID".to_string()));
+        return Err(ApiError::validation("无效的ID".to_string()));
     }
 
     // 删除记录
@@ -254,7 +254,7 @@ pub async fn delete_codex_provider(
         );
         match e {
             crate::services::codex_service::CodexServiceError::Validation(msg) => {
-                ApiError::Validation(msg)
+                ApiError::validation(msg)
             }
             crate::services::codex_service::CodexServiceError::ProviderNotFound(_) => {
                 ApiError::NotFound { resource: "Codex供应商不存在".to_string() }
@@ -375,7 +375,7 @@ pub async fn test_codex_provider_connection(
     );
 
     if id <= 0 {
-        return Err(ApiError::Validation("无效的ID".to_string()));
+        return Err(ApiError::validation("无效的ID".to_string()));
     }
 
     match state.codex_service.test_provider_connection(id).await {
@@ -402,15 +402,15 @@ pub async fn test_codex_provider_connection(
                 id = %id,
                 "Codex供应商连接测试失败"
             );
-            return Err(match e {
+            Err(match e {
                 crate::services::codex_service::CodexServiceError::Validation(msg) => {
-                    ApiError::Validation(msg)
+                    ApiError::validation(msg)
                 }
                 crate::services::codex_service::CodexServiceError::ProviderNotFound(_) => {
                     ApiError::NotFound { resource: "Codex供应商不存在".to_string() }
                 }
                 _ => ApiError::Database { message: format!("连接测试失败: {}", e) },
-            });
+            })
         }
     }
 }

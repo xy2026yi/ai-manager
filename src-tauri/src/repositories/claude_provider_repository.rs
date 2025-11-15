@@ -182,7 +182,7 @@ impl ClaudeProviderRepository {
         }
 
         let limit = limit.unwrap_or(50);
-        
+
         // 使用优化的搜索查询，优先搜索名称字段
         let query = r#"
             SELECT * FROM claude_providers 
@@ -198,7 +198,7 @@ impl ClaudeProviderRepository {
         "#;
 
         let search_pattern = format!("%{}%", search_term);
-        
+
         tracing::debug!(
             search_term = %search_term,
             limit = %limit,
@@ -206,12 +206,12 @@ impl ClaudeProviderRepository {
         );
 
         let results = sqlx::query_as::<_, ClaudeProvider>(query)
-            .bind(&search_pattern)  // name LIKE
-            .bind(&search_pattern)  // url LIKE  
-            .bind(&search_pattern)  // opus_model LIKE
-            .bind(&search_pattern)  // sonnet_model LIKE
-            .bind(&search_pattern)  // haiku_model LIKE
-            .bind(&search_pattern)  // ORDER BY name LIKE
+            .bind(&search_pattern) // name LIKE
+            .bind(&search_pattern) // url LIKE
+            .bind(&search_pattern) // opus_model LIKE
+            .bind(&search_pattern) // sonnet_model LIKE
+            .bind(&search_pattern) // haiku_model LIKE
+            .bind(&search_pattern) // ORDER BY name LIKE
             .bind(limit)
             .fetch_all(&self.pool)
             .await?;
@@ -384,12 +384,9 @@ impl BaseRepository for ClaudeProviderRepository {
                     .fetch_all(self.pool())
                     .await
             },
-            async {
-                sqlx::query_scalar::<_, i64>(count_query)
-                    .fetch_one(self.pool())
-                    .await
-            }
-        ).map_err(|e| RepositoryError::Query(format!("并行查询失败: {}", e)))?;
+            async { sqlx::query_scalar::<_, i64>(count_query).fetch_one(self.pool()).await }
+        )
+        .map_err(|e| RepositoryError::Query(format!("并行查询失败: {}", e)))?;
 
         let paged_result = crate::models::PagedResult::new(data, total, page, limit);
 

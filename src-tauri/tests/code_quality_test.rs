@@ -4,9 +4,9 @@
 
 #[cfg(test)]
 mod tests {
-    use migration_ai_manager_lib::{LoggingManager, LogConfig};
-    use tracing::{info, warn, error};
+    use migration_ai_manager_lib::{LogConfig, LoggingManager};
     use std::sync::Once;
+    use tracing::{error, info, warn};
 
     static INIT: Once = Once::new();
 

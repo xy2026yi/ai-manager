@@ -55,7 +55,7 @@ impl CryptoService {
         if plaintext.is_empty() {
             return Err(CryptoError::Encryption("待加密文本不能为空".to_string()));
         }
-        
+
         let encrypted = self.fernet.encrypt(plaintext.as_bytes());
         Ok(encrypted)
     }
@@ -65,12 +65,12 @@ impl CryptoService {
         if ciphertext.is_empty() {
             return Err(CryptoError::Decryption("待解密文本不能为空".to_string()));
         }
-        
+
         let decrypted = self
             .fernet
             .decrypt(ciphertext)
             .map_err(|e| CryptoError::Decryption(e.to_string()))?;
-        
+
         // 直接从bytes转换为String，避免中间分配
         match String::from_utf8(decrypted) {
             Ok(s) => Ok(s),
@@ -86,7 +86,7 @@ impl CryptoService {
 
         // 预分配结果向量，避免多次重新分配
         let mut results = Vec::with_capacity(items.len());
-        
+
         for item in items {
             // 避免不必要的字符串克隆，直接使用引用
             let encrypted = self.encrypt(item)?;
@@ -104,7 +104,7 @@ impl CryptoService {
 
         // 预分配结果向量，避免多次重新分配
         let mut results = Vec::with_capacity(items.len());
-        
+
         for item in items {
             // 避免不必要的字符串克隆，直接使用引用
             let decrypted = self.decrypt(item)?;

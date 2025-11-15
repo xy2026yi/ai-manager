@@ -26,7 +26,7 @@ pub struct ApiState {
 impl From<ClaudeServiceError> for ApiError {
     fn from(err: ClaudeServiceError) -> Self {
         match err {
-            ClaudeServiceError::Validation(msg) => ApiError::Validation(msg),
+            ClaudeServiceError::Validation(msg) => ApiError::validation(msg),
             ClaudeServiceError::BusinessRule(msg) => ApiError::BusinessRule(msg),
             ClaudeServiceError::Repository(repo_err) => ApiError::Database(repo_err.to_string()),
             ClaudeServiceError::ProviderNotFound(id) => ApiError::NotFound(format!("供应商 {} 不存在", id)),
@@ -149,7 +149,7 @@ pub async fn update_claude_provider(
     let repository = ClaudeProviderRepository::new(&state.db_manager, &state.crypto_service);
 
     if id <= 0 {
-        return Err(ApiError::Validation("无效的ID".to_string()));
+        return Err(ApiError::validation("无效的ID".to_string()));
     }
 
     // 检查记录是否存在
@@ -173,13 +173,13 @@ pub async fn update_claude_provider(
     // 验证更新数据
     if let Some(ref name) = request.name {
         if name.trim().is_empty() {
-            return Err(ApiError::Validation("供应商名称不能为空".to_string()));
+            return Err(ApiError::validation("供应商名称不能为空".to_string()));
         }
     }
 
     if let Some(ref token) = request.token {
         if token.trim().is_empty() {
-            return Err(ApiError::Validation("Token不能为空".to_string()));
+            return Err(ApiError::validation("Token不能为空".to_string()));
         }
     }
 
@@ -242,7 +242,7 @@ pub async fn delete_claude_provider(
     let repository = ClaudeProviderRepository::new(&state.db_manager, &state.crypto_service);
 
     if id <= 0 {
-        return Err(ApiError::Validation("无效的ID".to_string()));
+        return Err(ApiError::validation("无效的ID".to_string()));
     }
 
     // 检查记录是否存在
@@ -388,7 +388,7 @@ pub async fn test_claude_provider_connection(
     let repository = ClaudeProviderRepository::new(&state.db_manager, &state.crypto_service);
 
     if id <= 0 {
-        return Err(ApiError::Validation("无效的ID".to_string()));
+        return Err(ApiError::validation("无效的ID".to_string()));
     }
 
     match repository.test_connection(id).await {

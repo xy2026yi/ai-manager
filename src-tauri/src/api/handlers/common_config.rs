@@ -60,27 +60,20 @@ pub async fn create_common_config(
 
     // 验证请求
     if request.key.trim().is_empty() {
-        return Err(ApiError::Validation("配置键不能为空".to_string()));
+        return Err(ApiError::validation("配置键不能为空".to_string()));
     }
 
     if request.value.trim().is_empty() {
-        return Err(ApiError::Validation("配置值不能为空".to_string()));
+        return Err(ApiError::validation("配置值不能为空".to_string()));
     }
 
     // 检查key是否已存在
-    if let Some(_) = repository.find_by_key(&request.key).await.map_err(|e| {
-        error!(
-            error = %e,
-            key = %request.key,
-            "检查配置键是否存在失败"
-        );
-        ApiError::Database { message: format!("检查配置键失败: {}", e) }
-    })? {
+    if repository.find_by_key(&request.key).await.is_ok() {
         warn!(
             key = %request.key,
             "配置键已存在"
         );
-        return Err(ApiError::Validation("配置键已存在".to_string()));
+        return Err(ApiError::validation("配置键已存在".to_string()));
     }
 
     // 创建记录
@@ -117,7 +110,9 @@ pub async fn create_common_config(
             id = %id,
             "创建通用配置后无法找到记录"
         );
-        Err(ApiError::Internal { message: "创建通用配置后无法找到记录".to_string() })
+        Err(ApiError::Internal {
+            message: "创建通用配置后无法找到记录".to_string()
+        })
     }
 }
 
@@ -134,7 +129,7 @@ pub async fn get_common_config(
     let repository = CommonConfigRepository::new(&state.db_manager, &state.crypto_service);
 
     if id <= 0 {
-        return Err(ApiError::Validation("无效的ID".to_string()));
+        return Err(ApiError::validation("无效的ID".to_string()));
     }
 
     match repository.find_by_id_decrypted(id).await {
@@ -181,7 +176,7 @@ pub async fn get_common_config_by_key(
     let repository = CommonConfigRepository::new(&state.db_manager, &state.crypto_service);
 
     if key.trim().is_empty() {
-        return Err(ApiError::Validation("配置键不能为空".to_string()));
+        return Err(ApiError::validation("配置键不能为空".to_string()));
     }
 
     match repository.find_by_key(&key).await {
@@ -228,7 +223,7 @@ pub async fn update_common_config(
     let repository = CommonConfigRepository::new(&state.db_manager, &state.crypto_service);
 
     if id <= 0 {
-        return Err(ApiError::Validation("无效的ID".to_string()));
+        return Err(ApiError::validation("无效的ID".to_string()));
     }
 
     // 检查记录是否存在
@@ -252,33 +247,24 @@ pub async fn update_common_config(
     // 验证更新数据
     if let Some(ref key) = request.key {
         if key.trim().is_empty() {
-            return Err(ApiError::Validation("配置键不能为空".to_string()));
+            return Err(ApiError::validation("配置键不能为空".to_string()));
         }
 
         // 如果更新key，检查新key是否已存在
         if let Some(existing_config) = existing.as_ref() {
-            if key != &existing_config.key {
-                if let Some(_) = repository.find_by_key(key).await.map_err(|e| {
-                    error!(
-                        error = %e,
-                        key = %key,
-                        "检查新配置键是否存在失败"
-                    );
-                    ApiError::Database { message: format!("检查配置键失败: {}", e) }
-                })? {
-                    warn!(
-                        key = %key,
-                        "新配置键已存在"
-                    );
-                    return Err(ApiError::Validation("新配置键已存在".to_string()));
-                }
+            if key != &existing_config.key && repository.find_by_key(key).await.is_ok() {
+                warn!(
+                    key = %key,
+                    "新配置键已存在"
+                );
+                return Err(ApiError::validation("新配置键已存在".to_string()));
             }
         }
     }
 
     if let Some(ref value) = request.value {
         if value.trim().is_empty() {
-            return Err(ApiError::Validation("配置值不能为空".to_string()));
+            return Err(ApiError::validation("配置值不能为空".to_string()));
         }
     }
 
@@ -324,7 +310,9 @@ pub async fn update_common_config(
             id = %id,
             "更新通用配置后无法找到记录"
         );
-        Err(ApiError::Internal { message: "更新通用配置后无法找到记录".to_string() })
+        Err(ApiError::Internal {
+            message: "更新通用配置后无法找到记录".to_string()
+        })
     }
 }
 
@@ -341,7 +329,7 @@ pub async fn delete_common_config(
     let repository = CommonConfigRepository::new(&state.db_manager, &state.crypto_service);
 
     if id <= 0 {
-        return Err(ApiError::Validation("无效的ID".to_string()));
+        return Err(ApiError::validation("无效的ID".to_string()));
     }
 
     // 检查记录是否存在
@@ -507,11 +495,11 @@ pub async fn batch_update_common_configs(
     let repository = CommonConfigRepository::new(&state.db_manager, &state.crypto_service);
 
     if request.configs.is_empty() {
-        return Err(ApiError::Validation("配置列表不能为空".to_string()));
+        return Err(ApiError::validation("配置列表不能为空".to_string()));
     }
 
     if request.configs.len() > 100 {
-        return Err(ApiError::Validation(
+        return Err(ApiError::validation(
             "单次批量更新配置数量不能超过100个".to_string(),
         ));
     }
@@ -519,10 +507,10 @@ pub async fn batch_update_common_configs(
     // 验证配置项
     for config in &request.configs {
         if config.key.trim().is_empty() {
-            return Err(ApiError::Validation("配置键不能为空".to_string()));
+            return Err(ApiError::validation("配置键不能为空".to_string()));
         }
         if config.value.trim().is_empty() {
-            return Err(ApiError::Validation("配置值不能为空".to_string()));
+            return Err(ApiError::validation("配置值不能为空".to_string()));
         }
     }
 
@@ -564,7 +552,7 @@ pub async fn validate_common_config(
     let repository = CommonConfigRepository::new(&state.db_manager, &state.crypto_service);
 
     if id <= 0 {
-        return Err(ApiError::Validation("无效的ID".to_string()));
+        return Err(ApiError::validation("无效的ID".to_string()));
     }
 
     match repository.validate_config_value(id).await {

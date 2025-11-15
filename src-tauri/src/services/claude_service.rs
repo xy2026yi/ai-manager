@@ -9,7 +9,7 @@ use crate::models::{
     UpdateClaudeProviderRequest,
 };
 use crate::repositories::{BaseRepository, ClaudeProviderRepository};
-use crate::{Validator, ValidationError};
+use crate::{ValidationError, Validator};
 use std::sync::Arc;
 use tracing::{debug, error, info, warn};
 
@@ -227,7 +227,7 @@ impl ClaudeProviderService {
         limit: Option<i64>,
     ) -> ClaudeServiceResult<Vec<ClaudeProvider>> {
         let trimmed_term = search_term.trim();
-        
+
         debug!(
             search_term = %trimmed_term,
             limit = ?limit,
@@ -248,12 +248,12 @@ impl ClaudeProviderService {
 
         // 直接使用优化的索引查询，避免多次数据库访问
         let query = "SELECT * FROM claude_providers WHERE enabled = 1 ORDER BY id DESC";
-        
+
         let providers = sqlx::query_as::<_, ClaudeProvider>(query)
             .fetch_all(&self.repository.pool)
             .await
             .map_err(|e| ClaudeServiceError::Repository(e.into()))?;
-        
+
         Ok(providers)
     }
 

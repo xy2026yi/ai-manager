@@ -15,18 +15,12 @@ pub struct ValidationError {
 impl ValidationError {
     /// 创建新的验证错误
     pub fn new(message: impl Into<String>) -> Self {
-        Self {
-            message: message.into(),
-            field: None,
-        }
+        Self { message: message.into(), field: None }
     }
 
     /// 创建带字段的验证错误
     pub fn with_field(message: impl Into<String>, field: impl Into<String>) -> Self {
-        Self {
-            message: message.into(),
-            field: Some(field.into()),
-        }
+        Self { message: message.into(), field: Some(field.into()) }
     }
 }
 
@@ -91,13 +85,13 @@ impl Validator {
     }
 
     /// 验证搜索词
-    pub fn validate_search_term<'a>(value: &'a str) -> ValidationResult<&'a str> {
+    pub fn validate_search_term(value: &str) -> ValidationResult<&str> {
         Self::validate_non_empty(value, "搜索词")
             .and_then(|term| Self::validate_string_length(term, "搜索词", 1, 100))
     }
 
     /// 验证供应商名称
-    pub fn validate_provider_name<'a>(value: &'a str) -> ValidationResult<&'a str> {
+    pub fn validate_provider_name(value: &str) -> ValidationResult<&str> {
         Self::validate_non_empty(value, "供应商名称")
             .and_then(|name| Self::validate_string_length(name, "供应商名称", 1, 100))
     }

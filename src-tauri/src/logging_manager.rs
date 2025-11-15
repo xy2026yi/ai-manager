@@ -2,6 +2,8 @@
 //!
 //! 提供统一的日志配置和管理功能
 
+use std::fs;
+use std::path::PathBuf;
 use tracing::Level;
 use tracing_subscriber::{
     fmt::{self, format::FmtSpan},
@@ -9,8 +11,6 @@ use tracing_subscriber::{
     util::SubscriberInitExt,
     EnvFilter, Layer, Registry,
 };
-use std::fs;
-use std::path::PathBuf;
 
 /// 日志管理器
 pub struct LoggingManager {
@@ -22,14 +22,9 @@ impl LoggingManager {
     /// 创建新的日志管理器
     pub fn new(app_name: impl Into<String>) -> Self {
         let app_name = app_name.into();
-        let log_dir = std::env::current_dir()
-            .unwrap_or_else(|_| PathBuf::from("."))
-            .join("logs");
+        let log_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")).join("logs");
 
-        Self {
-            app_name,
-            log_dir,
-        }
+        Self { app_name, log_dir }
     }
 
     /// 初始化生产环境日志
@@ -41,19 +36,14 @@ impl LoggingManager {
         let error_log_file = self.log_dir.join(format!("{}-error.log", self.app_name));
 
         // 创建文件输出
-        let file = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&log_file)?;
+        let file = std::fs::OpenOptions::new().create(true).append(true).open(&log_file)?;
 
-        let error_file = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&error_log_file)?;
+        let error_file =
+            std::fs::OpenOptions::new().create(true).append(true).open(&error_log_file)?;
 
         // 创建环境过滤器
-        let env_filter = EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| EnvFilter::new("info"));
+        let env_filter =
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
         // 构建订阅者
         let subscriber = Registry::default()
@@ -91,14 +81,13 @@ impl LoggingManager {
 
     /// 初始化开发环境日志
     pub fn init_development() -> Result<(), Box<dyn std::error::Error>> {
-        let env_filter = EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| {
-                EnvFilter::new("migration_ai_manager=debug")
-                    .add_directive("sqlx=warn".parse().unwrap())
-                    .add_directive("hyper=warn".parse().unwrap())
-                    .add_directive("tokio=warn".parse().unwrap())
-                    .add_directive("tower=warn".parse().unwrap())
-            });
+        let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+            EnvFilter::new("migration_ai_manager=debug")
+                .add_directive("sqlx=warn".parse().unwrap())
+                .add_directive("hyper=warn".parse().unwrap())
+                .add_directive("tokio=warn".parse().unwrap())
+                .add_directive("tower=warn".parse().unwrap())
+        });
 
         let subscriber = tracing_subscriber::fmt()
             .with_max_level(Level::DEBUG)
@@ -119,8 +108,8 @@ impl LoggingManager {
 
     /// 初始化测试环境日志
     pub fn init_test() -> Result<(), Box<dyn std::error::Error>> {
-        let env_filter = EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| EnvFilter::new("warn"));
+        let env_filter =
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("warn"));
 
         let subscriber = tracing_subscriber::fmt()
             .with_max_level(Level::WARN)
@@ -136,7 +125,10 @@ impl LoggingManager {
 
     /// 初始化基于环境的日志系统
     pub fn init_from_env() -> Result<(), Box<dyn std::error::Error>> {
-        match std::env::var("RUST_LOG_ENV").unwrap_or_else(|_| "development".to_string()).as_str() {
+        match std::env::var("RUST_LOG_ENV")
+            .unwrap_or_else(|_| "development".to_string())
+            .as_str()
+        {
             "production" => {
                 let manager = Self::new("migration_ai_manager");
                 manager.init_production()
@@ -148,14 +140,12 @@ impl LoggingManager {
 
     /// 创建性能日志记录器
     pub fn create_performance_logger() -> impl Layer<Registry> + Send + Sync + 'static {
-        fmt::layer()
-            .with_target(false)
-            .with_ansi(false)
-            .compact()
-            .with_filter(tracing_subscriber::filter::filter_fn(|metadata| {
+        fmt::layer().with_target(false).with_ansi(false).compact().with_filter(
+            tracing_subscriber::filter::filter_fn(|metadata| {
                 metadata.target().starts_with("migration_ai_manager::performance")
                     || metadata.target().starts_with("migration_ai_manager::database")
-            }))
+            }),
+        )
     }
 
     /// 创建业务逻辑日志记录器
@@ -187,9 +177,7 @@ impl LoggingManager {
             return Ok(());
         }
 
-        let cutoff = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)?
-            .as_secs()
+        let cutoff = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)?.as_secs()
             - days * 24 * 60 * 60;
 
         for entry in fs::read_dir(&self.log_dir)? {
@@ -282,10 +270,7 @@ impl LoggingManager {
             fs::create_dir_all(&log_dir)?;
 
             let log_file = log_dir.join("app.log");
-            let file = std::fs::OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open(&log_file)?;
+            let file = std::fs::OpenOptions::new().create(true).append(true).open(&log_file)?;
 
             let file_layer = fmt::layer()
                 .with_writer(file)
@@ -303,9 +288,7 @@ impl LoggingManager {
         }
 
         // 组合所有层
-        let subscriber = Registry::default()
-            .with(env_filter)
-            .with(layers);
+        let subscriber = Registry::default().with(env_filter).with(layers);
 
         subscriber.init();
 

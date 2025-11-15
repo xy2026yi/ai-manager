@@ -15,18 +15,12 @@ pub struct ValidationError {
 impl ValidationError {
     /// 创建新的验证错误
     pub fn new(message: impl Into<String>) -> Self {
-        Self {
-            message: message.into(),
-            field: None,
-        }
+        Self { message: message.into(), field: None }
     }
 
     /// 创建带字段的验证错误
     pub fn with_field(message: impl Into<String>, field: impl Into<String>) -> Self {
-        Self {
-            message: message.into(),
-            field: Some(field.into()),
-        }
+        Self { message: message.into(), field: Some(field.into()) }
     }
 }
 

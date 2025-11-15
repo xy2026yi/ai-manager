@@ -6,9 +6,7 @@ use criterion::{black_box, criterion_group, criterion_main, Criterion};
 //use migration_ai_manager_lib::{
 //    api, crypto::CryptoService, database::DatabaseManager, services::*,
 //};
-use migration_ai_manager_lib::{
-    crypto::CryptoService, database::DatabaseManager, services::*,
-};
+use migration_ai_manager_lib::{crypto::CryptoService, database::DatabaseManager, services::*};
 //use serde_json::json;
 use std::sync::Arc;
 use tokio::runtime::Runtime;

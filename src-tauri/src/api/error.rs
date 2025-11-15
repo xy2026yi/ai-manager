@@ -94,11 +94,8 @@ pub enum ApiError {
 
 impl ApiError {
     /// 创建验证错误（简化版本）
-    pub fn Validation(message: impl Into<String>) -> Self {
-        Self::ValidationError {
-            message: message.into(),
-            field: None,
-        }
+    pub fn validation(message: impl Into<String>) -> Self {
+        Self::ValidationError { message: message.into(), field: None }
     }
 
     /// 获取HTTP状态码
@@ -251,6 +248,6 @@ impl From<serde_json::Error> for ApiError {
 
 impl From<crate::ValidationError> for ApiError {
     fn from(err: crate::ValidationError) -> Self {
-        ApiError::Validation(err.to_string())
+        ApiError::validation(err.to_string())
     }
 }

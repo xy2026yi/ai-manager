@@ -32,11 +32,11 @@ impl Default for DatabaseConfig {
     fn default() -> Self {
         Self {
             url: "sqlite:data/ai_manager.db".to_string(),
-            max_connections: 10,  // 优化连接池大小，减少内存占用
-            min_connections: 1,   // 最小连接数，减少资源浪费
-            connect_timeout: Duration::from_secs(5),  // 快速连接超时
-            idle_timeout: Duration::from_secs(180),   // 优化空闲超时
-            max_lifetime: Duration::from_secs(600),   // 优化连接生命周期
+            max_connections: 10, // 优化连接池大小，减少内存占用
+            min_connections: 1,  // 最小连接数，减少资源浪费
+            connect_timeout: Duration::from_secs(5), // 快速连接超时
+            idle_timeout: Duration::from_secs(180), // 优化空闲超时
+            max_lifetime: Duration::from_secs(600), // 优化连接生命周期
         }
     }
 }
@@ -79,9 +79,7 @@ impl DatabaseManager {
                 .after_connect(|conn, _meta| {
                     Box::pin(async move {
                         // SQLite性能优化设置
-                        sqlx::query("PRAGMA journal_mode = WAL")
-                            .execute(&mut *conn)
-                            .await?;
+                        sqlx::query("PRAGMA journal_mode = WAL").execute(&mut *conn).await?;
                         sqlx::query("PRAGMA synchronous = NORMAL") // 平衡性能和安全性
                             .execute(&mut *conn)
                             .await?;
@@ -227,9 +225,15 @@ impl DatabaseManager {
         }
 
         if errors == 0 {
-            info!("✅ 连接池预热完成，{} 个连接就绪", self.config.min_connections);
+            info!(
+                "✅ 连接池预热完成，{} 个连接就绪",
+                self.config.min_connections
+            );
         } else {
-            warn!("⚠️ 连接池预热部分失败，{}/{} 个连接失败", errors, self.config.min_connections);
+            warn!(
+                "⚠️ 连接池预热部分失败，{}/{} 个连接失败",
+                errors, self.config.min_connections
+            );
         }
 
         Ok(())
@@ -348,14 +352,19 @@ impl<'a> QueryBuilder<'a> {
         let expected_cols = columns.len();
         for (i, row) in values.iter().enumerate() {
             if row.len() != expected_cols {
-                return Err(DatabaseError::Query(
-                    format!("第{}行数据长度({})与列数({})不匹配", i + 1, row.len(), expected_cols)
-                ));
+                return Err(DatabaseError::Query(format!(
+                    "第{}行数据长度({})与列数({})不匹配",
+                    i + 1,
+                    row.len(),
+                    expected_cols
+                )));
             }
         }
 
         // 使用事务提高批量插入性能
-        let mut tx = self.pool.begin()
+        let mut tx = self
+            .pool
+            .begin()
             .await
             .map_err(|e| DatabaseError::Query(format!("开始事务失败: {}", e)))?;
 
@@ -376,12 +385,11 @@ impl<'a> QueryBuilder<'a> {
 
             // 在事务内执行查询（修复关键问题）
             for row in chunk {
-                let query = row.iter().fold(
-                    sqlx::query(&query_str),
-                    |q, value| q.bind(value)
-                );
+                let query = row.iter().fold(sqlx::query(&query_str), |q, value| q.bind(value));
 
-                let result = query.execute(&mut *tx).await
+                let result = query
+                    .execute(&mut *tx)
+                    .await
                     .map_err(|e| DatabaseError::Query(format!("批量插入失败: {}", e)))?;
 
                 total_changes += result.rows_affected();
@@ -408,16 +416,16 @@ impl<'a> QueryBuilder<'a> {
             ("idx_claude_providers_type", "CREATE INDEX IF NOT EXISTS idx_claude_providers_type ON claude_providers(type)"),
             ("idx_claude_providers_name", "CREATE INDEX IF NOT EXISTS idx_claude_providers_name ON claude_providers(name)"),
             ("idx_claude_providers_created", "CREATE INDEX IF NOT EXISTS idx_claude_providers_created ON claude_providers(created_at)"),
-            
+
             ("idx_codex_providers_enabled", "CREATE INDEX IF NOT EXISTS idx_codex_providers_enabled ON codex_providers(enabled)"),
             ("idx_codex_providers_type", "CREATE INDEX IF NOT EXISTS idx_codex_providers_type ON codex_providers(type)"),
-            
+
             ("idx_agent_guides_type", "CREATE INDEX IF NOT EXISTS idx_agent_guides_type ON agent_guides(type)"),
             ("idx_agent_guides_name", "CREATE INDEX IF NOT EXISTS idx_agent_guides_name ON agent_guides(name)"),
-            
+
             ("idx_mcp_servers_type", "CREATE INDEX IF NOT EXISTS idx_mcp_servers_type ON mcp_servers(type)"),
             ("idx_mcp_servers_command", "CREATE INDEX IF NOT EXISTS idx_mcp_servers_command ON mcp_servers(command)"),
-            
+
             ("idx_common_configs_key", "CREATE INDEX IF NOT EXISTS idx_common_configs_key ON common_configs(key)"),
             ("idx_common_configs_category", "CREATE INDEX IF NOT EXISTS idx_common_configs_category ON common_configs(category)"),
             ("idx_common_configs_active", "CREATE INDEX IF NOT EXISTS idx_common_configs_active ON common_configs(is_active)"),
@@ -435,7 +443,10 @@ impl<'a> QueryBuilder<'a> {
     }
 
     /// 分析表性能统计
-    pub async fn analyze_table_performance(&self, table_name: &str) -> Result<TablePerformanceStats, DatabaseError> {
+    pub async fn analyze_table_performance(
+        &self,
+        table_name: &str,
+    ) -> Result<TablePerformanceStats, DatabaseError> {
         // 获取记录数
         let count = self.count_records(table_name).await?;
 
@@ -450,7 +461,8 @@ impl<'a> QueryBuilder<'a> {
         let estimated_size: i64 = size_result.get("estimated_size");
 
         // 获取索引信息
-        let index_query = "SELECT COUNT(*) as index_count FROM sqlite_master WHERE type='index' AND tbl_name=?";
+        let index_query =
+            "SELECT COUNT(*) as index_count FROM sqlite_master WHERE type='index' AND tbl_name=?";
         let index_result = sqlx::query(index_query)
             .bind(table_name)
             .fetch_one(self.pool)

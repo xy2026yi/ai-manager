@@ -116,10 +116,7 @@ pub fn init_logging(config: LoggingConfig) -> Result<(), Box<dyn std::error::Err
         .with_span_events(FmtSpan::CLOSE)
         .compact();
 
-    Registry::default()
-        .with(env_filter)
-        .with(fmt_layer)
-        .init();
+    Registry::default().with(env_filter).with(fmt_layer).init();
 
     tracing::info!(
         app_name = %config.app_name,

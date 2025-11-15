@@ -42,6 +42,7 @@ pub enum RepositoryError {
 pub type RepositoryResult<T> = Result<T, RepositoryError>;
 
 /// 基础Repository trait
+#[allow(async_fn_in_trait)]
 pub trait BaseRepository {
     /// 获取表名
     fn table_name() -> &'static str;
@@ -424,6 +425,7 @@ mod tests {
     use crate::database::DatabaseConfig;
     use tempfile::tempdir;
 
+    #[allow(dead_code)]
     async fn create_test_repository() -> GenericRepository<serde_json::Value> {
         let temp_dir = tempdir().unwrap();
         let db_path = temp_dir.path().join("test.db");

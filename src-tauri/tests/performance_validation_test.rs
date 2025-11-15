@@ -13,14 +13,14 @@ use tempfile::NamedTempFile;
 use tokio::sync::Semaphore;
 use tokio::task::JoinSet;
 
-use migration_ai_manager_lib::database::{DatabaseManager, DatabaseConfig};
-use migration_ai_manager_lib::performance::{PerformanceMonitor, MetricType};
+use migration_ai_manager_lib::database::{DatabaseConfig, DatabaseManager};
+use migration_ai_manager_lib::performance::{MetricType, PerformanceMonitor};
 
 /// 性能测试配置
 const PERFORMANCE_TARGETS: &[(MetricType, Duration)] = &[
-    (MetricType::DatabaseQuery, Duration::from_millis(50)),      // 数据库查询 < 50ms
+    (MetricType::DatabaseQuery, Duration::from_millis(50)), // 数据库查询 < 50ms
     (MetricType::DatabaseConnection, Duration::from_millis(10)), // 连接获取 < 10ms
-    (MetricType::Cryptography, Duration::from_millis(5)),        // 加密操作 < 5ms
+    (MetricType::Cryptography, Duration::from_millis(5)),   // 加密操作 < 5ms
 ];
 
 /// 测试数据库查询性能优化
@@ -53,16 +53,18 @@ async fn test_database_query_performance() -> Result<(), Box<dyn std::error::Err
     let start_time = Instant::now();
 
     for i in 0..query_count {
-        let _ = monitor.timed_operation(
-            MetricType::DatabaseQuery,
-            format!("test_query_{}", i),
-            || async {
-                let result = sqlx::query("SELECT COUNT(*) as count FROM sqlite_master")
-                    .fetch_one(db_manager.pool())
-                    .await;
-                result
-            },
-        ).await;
+        let _ = monitor
+            .timed_operation(
+                MetricType::DatabaseQuery,
+                format!("test_query_{}", i),
+                || async {
+                    let result = sqlx::query("SELECT COUNT(*) as count FROM sqlite_master")
+                        .fetch_one(db_manager.pool())
+                        .await;
+                    result
+                },
+            )
+            .await;
     }
 
     let total_time = start_time.elapsed();
@@ -86,11 +88,15 @@ async fn test_database_query_performance() -> Result<(), Box<dyn std::error::Err
             .map(|(_, duration)| *duration)
         {
             if summary.average_duration <= target_duration {
-                println!("✅ 数据库查询性能达标 (平均 {:?} <= 目标 {:?})",
-                    summary.average_duration, target_duration);
+                println!(
+                    "✅ 数据库查询性能达标 (平均 {:?} <= 目标 {:?})",
+                    summary.average_duration, target_duration
+                );
             } else {
-                println!("❌ 数据库查询性能未达标 (平均 {:?} > 目标 {:?})",
-                    summary.average_duration, target_duration);
+                println!(
+                    "❌ 数据库查询性能未达标 (平均 {:?} > 目标 {:?})",
+                    summary.average_duration, target_duration
+                );
             }
         }
 
@@ -145,17 +151,16 @@ async fn test_concurrent_performance() -> Result<(), Box<dyn std::error::Error>>
         join_set.spawn(async move {
             let _permit = permit;
 
-            monitor.timed_operation(
-                MetricType::DatabaseQuery,
-                format!("concurrent_task_{}", task_id),
-                || async {
-                    // 模拟数据库查询
-                    sqlx::query("SELECT 1 as test")
-                        .fetch_one(db_manager.pool())
-                        .await
-                        .unwrap();
-                },
-            ).await;
+            monitor
+                .timed_operation(
+                    MetricType::DatabaseQuery,
+                    format!("concurrent_task_{}", task_id),
+                    || async {
+                        // 模拟数据库查询
+                        sqlx::query("SELECT 1 as test").fetch_one(db_manager.pool()).await.unwrap();
+                    },
+                )
+                .await;
         });
     }
 
@@ -225,8 +230,10 @@ async fn test_memory_usage() -> Result<(), Box<dyn std::error::Error>> {
             is_active BOOLEAN DEFAULT 1,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )"
-    ).execute(db_manager.pool()).await?;
+        )",
+    )
+    .execute(db_manager.pool())
+    .await?;
 
     // 执行大量操作
     for batch in 0..10 {
@@ -234,19 +241,20 @@ async fn test_memory_usage() -> Result<(), Box<dyn std::error::Error>> {
 
         // 批量插入测试数据
         let test_data: Vec<Vec<String>> = (0..100)
-            .map(|i| vec![
-                format!("key_{}_{}", batch, i),
-                format!("value_{}_{}", batch, i),
-                "test".to_string(),
-            ])
+            .map(|i| {
+                vec![
+                    format!("key_{}_{}", batch, i),
+                    format!("value_{}_{}", batch, i),
+                    "test".to_string(),
+                ]
+            })
             .collect();
 
-        let query_builder = migration_ai_manager_lib::database::QueryBuilder::new(db_manager.pool());
-        query_builder.batch_insert(
-            "common_configs",
-            &["key", "value", "category"],
-            test_data,
-        ).await?;
+        let query_builder =
+            migration_ai_manager_lib::database::QueryBuilder::new(db_manager.pool());
+        query_builder
+            .batch_insert("common_configs", &["key", "value", "category"], test_data)
+            .await?;
 
         // 强制垃圾回收
         tokio::task::yield_now().await;
@@ -399,7 +407,7 @@ async fn generate_performance_report() -> Result<(), Box<dyn std::error::Error>>
 "#,
         std::env::consts::OS,
         chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC"),
-  "1.75.0" // 使用固定版本号避免依赖rustc_version
+        "1.75.0" // 使用固定版本号避免依赖rustc_version
     );
 
     // 写入报告文件
