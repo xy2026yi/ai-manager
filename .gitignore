@@ -38,6 +38,10 @@ env/
 *.db-wal
 *.sqlite-shm
 *.sqlite-wal
+src-tauri/*.db-shm
+src-tauri/*.db-wal
+src-tauri/*.sqlite-shm
+src-tauri/*.sqlite-wal
 
 # 环境变量
 .env
