@@ -1,10 +1,9 @@
 // 测试所有依赖是否正确导入和工作的临时文件
-use serde::{Deserialize, Serialize};
 use fernet::Fernet;
 use handlebars::Handlebars;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use tracing::{info, error};
-use tracing_subscriber;
+use tracing::{error, info};
 
 // 测试数据结构
 #[derive(Debug, Serialize, Deserialize)]
@@ -46,7 +45,8 @@ fn test_template() -> Result<(), AppError> {
     let mut handlebars = Handlebars::new();
 
     let template_str = "你好, {{name}}! 欢迎使用 {{app_name}}。";
-    handlebars.register_template_string("greeting", template_str)
+    handlebars
+        .register_template_string("greeting", template_str)
         .map_err(|e| AppError::Template(e.to_string()))?;
 
     let data = serde_json::json!({
@@ -54,7 +54,8 @@ fn test_template() -> Result<(), AppError> {
         "app_name": "AI Manager"
     });
 
-    let result = handlebars.render("greeting", &data)
+    let result = handlebars
+        .render("greeting", &data)
         .map_err(|e| AppError::Template(e.to_string()))?;
 
     assert!(result.contains("你好, 用户!"));

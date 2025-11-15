@@ -2,7 +2,7 @@
 //!
 //! 这个模块提供从Python版本AI Manager迁移数据到Rust版本的工具
 
-use crate::crypto::{CryptoService, CryptoError};
+use crate::crypto::{CryptoError, CryptoService};
 use crate::database::{DatabaseManager, QueryBuilder};
 use crate::models::*;
 use serde::{Deserialize, Serialize};
@@ -10,7 +10,9 @@ use sqlx::Row;
 use std::collections::HashMap;
 use std::path::Path;
 use thiserror::Error;
-use tracing::{info, warn, error, debug};
+use tracing::{debug, error, info, warn};
+use std::time::Duration;
+use std::clone::Clone;
 
 /// 迁移错误类型
 #[derive(Error, Debug)]
@@ -126,23 +128,29 @@ pub struct DataMigrationTool {
 
 impl DataMigrationTool {
     /// 创建新的迁移工具实例
-    pub async fn new(db_manager: DatabaseManager, encryption_key: &str) -> Result<Self, MigrationError> {
+    pub async fn new(
+        db_manager: DatabaseManager,
+        encryption_key: &str,
+    ) -> Result<Self, MigrationError> {
         let crypto_service = CryptoService::new(encryption_key)?;
 
-        Ok(Self {
-            crypto_service,
-            db_manager,
-        })
+        Ok(Self { crypto_service, db_manager })
     }
 
     /// 从JSON文件导入Python数据
-    pub async fn import_from_json_file<P: AsRef<Path>>(&self, file_path: P) -> Result<MigrationReport, MigrationError> {
+    pub async fn import_from_json_file<P: AsRef<Path>>(
+        &self,
+        file_path: P,
+    ) -> Result<MigrationReport, MigrationError> {
         let content = std::fs::read_to_string(file_path)?;
         self.import_from_json(&content).await
     }
 
     /// 从JSON字符串导入Python数据
-    pub async fn import_from_json(&self, json_content: &str) -> Result<MigrationReport, MigrationError> {
+    pub async fn import_from_json(
+        &self,
+        json_content: &str,
+    ) -> Result<MigrationReport, MigrationError> {
         info!("开始从JSON导入数据...");
         let start_time = std::time::Instant::now();
 
@@ -167,22 +175,29 @@ impl DataMigrationTool {
         self.clear_existing_data(&mut report).await?;
 
         // 导入Claude供应商
-        report.claude_providers = self.import_claude_providers(&python_data.claude_providers, &mut report).await?;
+        report.claude_providers =
+            self.import_claude_providers(&python_data.claude_providers, &mut report).await?;
 
         // 导入Codex供应商
-        report.codex_providers = self.import_codex_providers(&python_data.codex_providers, &mut report).await?;
+        report.codex_providers =
+            self.import_codex_providers(&python_data.codex_providers, &mut report).await?;
 
         // 导入Agent指导文件
-        report.agent_guides = self.import_agent_guides(&python_data.agent_guides, &mut report).await?;
+        report.agent_guides =
+            self.import_agent_guides(&python_data.agent_guides, &mut report).await?;
 
         // 导入MCP服务器
         report.mcp_servers = self.import_mcp_servers(&python_data.mcp_servers, &mut report).await?;
 
         // 导入通用配置
-        report.common_configs = self.import_common_configs(&python_data.common_configs, &mut report).await?;
+        report.common_configs =
+            self.import_common_configs(&python_data.common_configs, &mut report).await?;
 
-        report.total_migrated = report.claude_providers + report.codex_providers +
-                               report.agent_guides + report.mcp_servers + report.common_configs;
+        report.total_migrated = report.claude_providers
+            + report.codex_providers
+            + report.agent_guides
+            + report.mcp_servers
+            + report.common_configs;
 
         report.duration_secs = start_time.elapsed().as_secs();
 
@@ -198,18 +213,30 @@ impl DataMigrationTool {
                 info!("✅ 版本 {} 兼容", version);
                 Ok(())
             }
-            _ => Err(MigrationError::VersionMismatch(format!("不支持的版本: {}", version)))
+            _ => Err(MigrationError::VersionMismatch(format!(
+                "不支持的版本: {}",
+                version
+            ))),
         }
     }
 
     /// 清空现有数据
-    async fn clear_existing_data(&self, report: &mut MigrationReport) -> Result<(), MigrationError> {
+    async fn clear_existing_data(
+        &self,
+        report: &mut MigrationReport,
+    ) -> Result<(), MigrationError> {
         info!("清理现有数据...");
 
         let query_builder = QueryBuilder::new(self.db_manager.pool());
 
         // 清空各个表
-        let tables = ["claude_providers", "codex_providers", "agent_guides", "mcp_servers", "common_configs"];
+        let tables = [
+            "claude_providers",
+            "codex_providers",
+            "agent_guides",
+            "mcp_servers",
+            "common_configs",
+        ];
         for table in tables {
             match query_builder.execute_raw(&format!("DELETE FROM {}", table), &[]).await {
                 Ok(_) => debug!("清空表 {}", table),
@@ -225,7 +252,11 @@ impl DataMigrationTool {
     }
 
     /// 导入Claude供应商
-    async fn import_claude_providers(&self, providers: &[PythonClaudeProvider], report: &mut MigrationReport) -> Result<usize, MigrationError> {
+    async fn import_claude_providers(
+        &self,
+        providers: &[PythonClaudeProvider],
+        report: &mut MigrationReport,
+    ) -> Result<usize, MigrationError> {
         info!("导入 {} 个Claude供应商", providers.len());
         let mut imported = 0;
 
@@ -247,7 +278,10 @@ impl DataMigrationTool {
     }
 
     /// 导入单个Claude供应商
-    async fn import_claude_provider(&self, provider: &PythonClaudeProvider) -> Result<(), MigrationError> {
+    async fn import_claude_provider(
+        &self,
+        provider: &PythonClaudeProvider,
+    ) -> Result<(), MigrationError> {
         // 加密token
         let encrypted_token = self.crypto_service.encrypt(&provider.token)?;
 
@@ -279,14 +313,21 @@ impl DataMigrationTool {
         ];
 
         QueryBuilder::new(self.db_manager.pool())
-            .execute_raw(query, &params.iter().map(|s| s.as_str()).collect::<Vec<_>>())
+            .execute_raw(
+                query,
+                &params.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
+            )
             .await?;
 
         Ok(())
     }
 
     /// 导入Codex供应商
-    async fn import_codex_providers(&self, providers: &[PythonCodexProvider], report: &mut MigrationReport) -> Result<usize, MigrationError> {
+    async fn import_codex_providers(
+        &self,
+        providers: &[PythonCodexProvider],
+        report: &mut MigrationReport,
+    ) -> Result<usize, MigrationError> {
         info!("导入 {} 个Codex供应商", providers.len());
         let mut imported = 0;
 
@@ -308,7 +349,10 @@ impl DataMigrationTool {
     }
 
     /// 导入单个Codex供应商
-    async fn import_codex_provider(&self, provider: &PythonCodexProvider) -> Result<(), MigrationError> {
+    async fn import_codex_provider(
+        &self,
+        provider: &PythonCodexProvider,
+    ) -> Result<(), MigrationError> {
         let encrypted_token = self.crypto_service.encrypt(&provider.token)?;
 
         let query = r#"
@@ -326,14 +370,21 @@ impl DataMigrationTool {
         ];
 
         QueryBuilder::new(self.db_manager.pool())
-            .execute_raw(query, &params.iter().map(|s| s.as_str()).collect::<Vec<_>>())
+            .execute_raw(
+                query,
+                &params.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
+            )
             .await?;
 
         Ok(())
     }
 
     /// 导入Agent指导文件
-    async fn import_agent_guides(&self, guides: &[PythonAgentGuide], report: &mut MigrationReport) -> Result<usize, MigrationError> {
+    async fn import_agent_guides(
+        &self,
+        guides: &[PythonAgentGuide],
+        report: &mut MigrationReport,
+    ) -> Result<usize, MigrationError> {
         info!("导入 {} 个Agent指导文件", guides.len());
         let mut imported = 0;
 
@@ -362,17 +413,19 @@ impl DataMigrationTool {
             VALUES (?, ?, ?)
         "#;
 
-        let params = [&guide.name, &guide.r#type, &guide.text];
+        let params = [guide.name.as_str(), guide.r#type.as_str(), guide.text.as_str()];
 
-        QueryBuilder::new(self.db_manager.pool())
-            .execute_raw(query, &params)
-            .await?;
+        QueryBuilder::new(self.db_manager.pool()).execute_raw(query, &params).await?;
 
         Ok(())
     }
 
     /// 导入MCP服务器
-    async fn import_mcp_servers(&self, servers: &[PythonMcpServer], report: &mut MigrationReport) -> Result<usize, MigrationError> {
+    async fn import_mcp_servers(
+        &self,
+        servers: &[PythonMcpServer],
+        report: &mut MigrationReport,
+    ) -> Result<usize, MigrationError> {
         info!("导入 {} 个MCP服务器", servers.len());
         let mut imported = 0;
 
@@ -404,24 +457,34 @@ impl DataMigrationTool {
             VALUES (?, ?, ?, ?, ?, ?)
         "#;
 
+        let server_type = server.r#type.as_ref().unwrap_or(&"stdio".to_string()).clone();
+        let env_value = env_json.as_ref().unwrap_or(&"".to_string()).clone();
+
         let params = [
             &server.name,
-            &server.r#type.as_deref().unwrap_or("stdio"),
+            &server_type,
             &server.timeout.unwrap_or(30000).to_string(),
             &server.command,
             &args_json,
-            &env_json.as_deref().unwrap_or(""),
+            &env_value,
         ];
 
         QueryBuilder::new(self.db_manager.pool())
-            .execute_raw(query, &params.iter().map(|s| s.as_str()).collect::<Vec<_>>())
+            .execute_raw(
+                query,
+                &params.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
+            )
             .await?;
 
         Ok(())
     }
 
     /// 导入通用配置
-    async fn import_common_configs(&self, configs: &[PythonCommonConfig], report: &mut MigrationReport) -> Result<usize, MigrationError> {
+    async fn import_common_configs(
+        &self,
+        configs: &[PythonCommonConfig],
+        report: &mut MigrationReport,
+    ) -> Result<usize, MigrationError> {
         info!("导入 {} 个通用配置", configs.len());
         let mut imported = 0;
 
@@ -443,30 +506,37 @@ impl DataMigrationTool {
     }
 
     /// 导入单个通用配置
-    async fn import_common_config(&self, config: &PythonCommonConfig) -> Result<(), MigrationError> {
+    async fn import_common_config(
+        &self,
+        config: &PythonCommonConfig,
+    ) -> Result<(), MigrationError> {
         let query = r#"
             INSERT INTO common_configs
             (key, value, description, category, is_active)
             VALUES (?, ?, ?, ?, ?)
         "#;
 
+        let description = config.description.as_ref().unwrap_or(&"".to_string()).clone();
+        let category = config.category.as_ref().unwrap_or(&"general".to_string()).clone();
+
         let params = [
-            &config.key,
-            &config.value,
-            &config.description.as_deref().unwrap_or(""),
-            &config.category.as_deref().unwrap_or("general"),
+            config.key.as_str(),
+            config.value.as_str(),
+            description.as_str(),
+            category.as_str(),
             &config.is_active.unwrap_or(1).to_string(),
         ];
 
-        QueryBuilder::new(self.db_manager.pool())
-            .execute_raw(query, &params)
-            .await?;
+        QueryBuilder::new(self.db_manager.pool()).execute_raw(query, &params).await?;
 
         Ok(())
     }
 
     /// 导出数据到JSON文件
-    pub async fn export_to_json_file<P: AsRef<Path>>(&self, file_path: P) -> Result<(), MigrationError> {
+    pub async fn export_to_json_file<P: AsRef<Path>>(
+        &self,
+        file_path: P,
+    ) -> Result<(), MigrationError> {
         let data = self.export_to_json().await?;
         std::fs::write(file_path, serde_json::to_string_pretty(&data)?)?;
         Ok(())
@@ -496,11 +566,14 @@ impl DataMigrationTool {
     }
 
     /// 导出Claude供应商
-    async fn export_claude_providers(&self, query_builder: &QueryBuilder) -> Result<Vec<PythonClaudeProvider>, MigrationError> {
+    async fn export_claude_providers(
+        &self,
+        _query_builder: &QueryBuilder<'_>,
+    ) -> Result<Vec<PythonClaudeProvider>, MigrationError> {
         let rows = sqlx::query("SELECT * FROM claude_providers")
             .fetch_all(self.db_manager.pool())
             .await
-            .map_err(|e| MigrationError::Database(e.to_string()))?;
+            .map_err(|e| MigrationError::Database(crate::database::DatabaseError::Query(e.to_string())))?;
 
         let mut providers = Vec::new();
         for row in rows {
@@ -534,11 +607,14 @@ impl DataMigrationTool {
     }
 
     /// 导出Codex供应商
-    async fn export_codex_providers(&self, query_builder: &QueryBuilder) -> Result<Vec<PythonCodexProvider>, MigrationError> {
+    async fn export_codex_providers(
+        &self,
+        _query_builder: &QueryBuilder<'_>,
+    ) -> Result<Vec<PythonCodexProvider>, MigrationError> {
         let rows = sqlx::query("SELECT * FROM codex_providers")
             .fetch_all(self.db_manager.pool())
             .await
-            .map_err(|e| MigrationError::Database(e.to_string()))?;
+            .map_err(|e| MigrationError::Database(crate::database::DatabaseError::Query(e.to_string())))?;
 
         let mut providers = Vec::new();
         for row in rows {
@@ -564,11 +640,14 @@ impl DataMigrationTool {
     }
 
     /// 导出Agent指导文件
-    async fn export_agent_guides(&self, query_builder: &QueryBuilder) -> Result<Vec<PythonAgentGuide>, MigrationError> {
+    async fn export_agent_guides(
+        &self,
+        _query_builder: &QueryBuilder<'_>,
+    ) -> Result<Vec<PythonAgentGuide>, MigrationError> {
         let rows = sqlx::query("SELECT * FROM agent_guides")
             .fetch_all(self.db_manager.pool())
             .await
-            .map_err(|e| MigrationError::Database(e.to_string()))?;
+            .map_err(|e| MigrationError::Database(crate::database::DatabaseError::Query(e.to_string())))?;
 
         let mut guides = Vec::new();
         for row in rows {
@@ -586,11 +665,14 @@ impl DataMigrationTool {
     }
 
     /// 导出MCP服务器
-    async fn export_mcp_servers(&self, query_builder: &QueryBuilder) -> Result<Vec<PythonMcpServer>, MigrationError> {
+    async fn export_mcp_servers(
+        &self,
+        _query_builder: &QueryBuilder<'_>,
+    ) -> Result<Vec<PythonMcpServer>, MigrationError> {
         let rows = sqlx::query("SELECT * FROM mcp_servers")
             .fetch_all(self.db_manager.pool())
             .await
-            .map_err(|e| MigrationError::Database(e.to_string()))?;
+            .map_err(|e| MigrationError::Database(crate::database::DatabaseError::Query(e.to_string())))?;
 
         let mut servers = Vec::new();
         for row in rows {
@@ -617,11 +699,14 @@ impl DataMigrationTool {
     }
 
     /// 导出通用配置
-    async fn export_common_configs(&self, query_builder: &QueryBuilder) -> Result<Vec<PythonCommonConfig>, MigrationError> {
+    async fn export_common_configs(
+        &self,
+        _query_builder: &QueryBuilder<'_>,
+    ) -> Result<Vec<PythonCommonConfig>, MigrationError> {
         let rows = sqlx::query("SELECT * FROM common_configs")
             .fetch_all(self.db_manager.pool())
             .await
-            .map_err(|e| MigrationError::Database(e.to_string()))?;
+            .map_err(|e| MigrationError::Database(crate::database::DatabaseError::Query(e.to_string())))?;
 
         let mut configs = Vec::new();
         for row in rows {
@@ -662,7 +747,12 @@ mod tests {
         };
 
         let db_manager = DatabaseManager::new(config).await.unwrap();
-        let migration_tool = DataMigrationTool::new(db_manager.clone(), "Jw4Ff1BWLnSykdfXDVOuEJCG6m9dyST5B1VhU_qg0fI=").await.unwrap();
+        let migration_tool = DataMigrationTool::new(
+            db_manager.clone(),
+            "Jw4Ff1BWLnSykdfXDVOuEJCG6m9dyST5B1VhU_qg0fI=",
+        )
+        .await
+        .unwrap();
 
         (migration_tool, db_manager)
     }
@@ -716,7 +806,10 @@ mod tests {
         let exported_data = migration_tool.export_to_json().await.unwrap();
 
         assert_eq!(exported_data.claude_providers.len(), 1);
-        assert_eq!(exported_data.claude_providers[0].name, "Test Claude Provider");
+        assert_eq!(
+            exported_data.claude_providers[0].name,
+            "Test Claude Provider"
+        );
         println!("✅ 数据导出测试通过");
     }
 }

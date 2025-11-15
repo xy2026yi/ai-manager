@@ -2,8 +2,8 @@
 //
 // 定义统一的API响应格式和分页响应
 
-use serde::{Deserialize, Serialize};
 use crate::models::PagedResult;
+use serde::{Deserialize, Serialize};
 
 /// 统一API响应格式
 #[derive(Debug, Serialize, Deserialize)]
@@ -84,10 +84,7 @@ impl<T> PagedResponse<T> {
     }
 
     /// 创建分页响应（带消息）
-    pub fn from_paged_result_with_message(
-        paged_result: PagedResult<T>,
-        message: String,
-    ) -> Self {
+    pub fn from_paged_result_with_message(paged_result: PagedResult<T>, message: String) -> Self {
         Self {
             success: true,
             data: paged_result.data,
@@ -125,11 +122,7 @@ impl ErrorResponse {
     pub fn new(code: String, message: String, details: Option<serde_json::Value>) -> Self {
         Self {
             success: false,
-            error: ErrorInfo {
-                code,
-                message,
-                details,
-            },
+            error: ErrorInfo { code, message, details },
             timestamp: chrono::Utc::now().to_rfc3339(),
         }
     }

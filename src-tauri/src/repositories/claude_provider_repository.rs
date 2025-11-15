@@ -2,11 +2,11 @@
 //
 // 提供Claude供应商的特定数据访问操作
 
-use sqlx::{FromRow, SqlitePool};
-use crate::repositories::base_repository::{BaseRepository, RepositoryResult, RepositoryError};
 use crate::crypto::CryptoService;
 use crate::database::DatabaseManager;
 use crate::models::{ClaudeProvider, CreateClaudeProviderRequest, UpdateClaudeProviderRequest};
+use crate::repositories::base_repository::{BaseRepository, RepositoryError, RepositoryResult};
+use sqlx::{FromRow, SqlitePool};
 
 /// Claude供应商Repository
 #[derive(Clone)]
@@ -26,11 +26,14 @@ impl ClaudeProviderRepository {
     }
 
     /// 创建Claude供应商记录
-    pub async fn create_claude_provider(&self, request: &CreateClaudeProviderRequest) -> RepositoryResult<i64> {
+    pub async fn create_claude_provider(
+        &self,
+        request: &CreateClaudeProviderRequest,
+    ) -> RepositoryResult<i64> {
         // 加密token
         let encrypted_token = crate::repositories::base_repository::EncryptedField::encrypt_field(
             &request.token,
-            &self.crypto_service
+            &self.crypto_service,
         )?;
 
         let query = r#"
@@ -65,19 +68,28 @@ impl ClaudeProviderRepository {
     }
 
     /// 更新Claude供应商记录
-    pub async fn update_claude_provider(&self, id: i64, request: &UpdateClaudeProviderRequest) -> RepositoryResult<bool> {
+    pub async fn update_claude_provider(
+        &self,
+        id: i64,
+        request: &UpdateClaudeProviderRequest,
+    ) -> RepositoryResult<bool> {
         // 获取现有记录
         let existing = self.find_by_id::<ClaudeProvider>(id).await?;
         if existing.is_none() {
-            return Err(RepositoryError::NotFound(format!("Claude供应商 ID {} 不存在", id)));
+            return Err(RepositoryError::NotFound(format!(
+                "Claude供应商 ID {} 不存在",
+                id
+            )));
         }
 
         // 如果提供了新的token，则加密它
         let encrypted_token = if let Some(ref token) = request.token {
-            Some(crate::repositories::base_repository::EncryptedField::encrypt_field(
-                token,
-                &self.crypto_service
-            )?)
+            Some(
+                crate::repositories::base_repository::EncryptedField::encrypt_field(
+                    token,
+                    &self.crypto_service,
+                )?,
+            )
         } else {
             None
         };
@@ -128,10 +140,11 @@ impl ClaudeProviderRepository {
         // 解密token
         let mut decrypted_providers = Vec::new();
         for provider in providers {
-            let decrypted_token = crate::repositories::base_repository::EncryptedField::decrypt_field(
-                &provider.token,
-                &self.crypto_service
-            )?;
+            let decrypted_token =
+                crate::repositories::base_repository::EncryptedField::decrypt_field(
+                    &provider.token,
+                    &self.crypto_service,
+                )?;
 
             let mut decrypted_provider = provider;
             decrypted_provider.token = decrypted_token;
@@ -144,10 +157,11 @@ impl ClaudeProviderRepository {
     /// 根据ID获取Claude供应商（解密token）
     pub async fn find_by_id_decrypted(&self, id: i64) -> RepositoryResult<Option<ClaudeProvider>> {
         if let Some(provider) = self.find_by_id::<ClaudeProvider>(id).await? {
-            let decrypted_token = crate::repositories::base_repository::EncryptedField::decrypt_field(
-                &provider.token,
-                &self.crypto_service
-            )?;
+            let decrypted_token =
+                crate::repositories::base_repository::EncryptedField::decrypt_field(
+                    &provider.token,
+                    &self.crypto_service,
+                )?;
 
             let mut decrypted_provider = provider;
             decrypted_provider.token = decrypted_token;
@@ -158,7 +172,11 @@ impl ClaudeProviderRepository {
     }
 
     /// 搜索Claude供应商
-    pub async fn search_claude_providers(&self, search_term: &str, limit: Option<i64>) -> RepositoryResult<Vec<ClaudeProvider>> {
+    pub async fn search_claude_providers(
+        &self,
+        search_term: &str,
+        limit: Option<i64>,
+    ) -> RepositoryResult<Vec<ClaudeProvider>> {
         let search_fields = vec!["name", "url", "opus_model", "sonnet_model", "haiku_model"];
         self.search::<ClaudeProvider>(search_term, &search_fields, limit).await
     }
@@ -169,9 +187,7 @@ impl ClaudeProviderRepository {
 
         tracing::debug!("获取活跃的Claude供应商列表");
 
-        let results = sqlx::query_as::<_, ClaudeProvider>(query)
-            .fetch_all(&self.pool)
-            .await?;
+        let results = sqlx::query_as::<_, ClaudeProvider>(query).fetch_all(&self.pool).await?;
 
         Ok(results)
     }
@@ -180,7 +196,10 @@ impl ClaudeProviderRepository {
     pub async fn test_connection(&self, id: i64) -> RepositoryResult<bool> {
         let provider = self.find_by_id_decrypted(id).await?;
         if provider.is_none() {
-            return Err(RepositoryError::NotFound(format!("Claude供应商 ID {} 不存在", id)));
+            return Err(RepositoryError::NotFound(format!(
+                "Claude供应商 ID {} 不存在",
+                id
+            )));
         }
 
         let provider = provider.unwrap();
@@ -225,10 +244,7 @@ impl BaseRepository for ClaudeProviderRepository {
     where
         T: for<'r> FromRow<'r, sqlx::sqlite::SqliteRow> + Send + Unpin,
     {
-        let query = format!(
-            "SELECT * FROM {} WHERE id = ?",
-            Self::table_name()
-        );
+        let query = format!("SELECT * FROM {} WHERE id = ?", Self::table_name());
 
         tracing::debug!(
             table_name = %Self::table_name(),
@@ -237,10 +253,7 @@ impl BaseRepository for ClaudeProviderRepository {
             query
         );
 
-        let result = sqlx::query_as::<_, T>(&query)
-            .bind(id)
-            .fetch_optional(self.pool())
-            .await?;
+        let result = sqlx::query_as::<_, T>(&query).bind(id).fetch_optional(self.pool()).await?;
 
         Ok(result)
     }
@@ -251,7 +264,7 @@ impl BaseRepository for ClaudeProviderRepository {
     {
         // 对于Claude供应商，使用专用的创建方法
         Err(RepositoryError::Validation(
-            "请使用 create_claude_provider 方法".to_string()
+            "请使用 create_claude_provider 方法".to_string(),
         ))
     }
 
@@ -261,7 +274,7 @@ impl BaseRepository for ClaudeProviderRepository {
     {
         // 对于Claude供应商，使用专用的更新方法
         Err(RepositoryError::Validation(
-            "请使用 update_claude_provider 方法".to_string()
+            "请使用 update_claude_provider 方法".to_string(),
         ))
     }
 
@@ -273,10 +286,7 @@ impl BaseRepository for ClaudeProviderRepository {
             "删除Claude供应商"
         );
 
-        let result = sqlx::query(query)
-            .bind(id)
-            .execute(self.pool())
-            .await?;
+        let result = sqlx::query(query).bind(id).execute(self.pool()).await?;
 
         Ok(result.rows_affected() > 0)
     }
@@ -289,14 +299,15 @@ impl BaseRepository for ClaudeProviderRepository {
 
         tracing::debug!("获取Claude供应商列表");
 
-        let results = sqlx::query_as::<_, T>(query)
-            .fetch_all(self.pool())
-            .await?;
+        let results = sqlx::query_as::<_, T>(query).fetch_all(self.pool()).await?;
 
         Ok(results)
     }
 
-    async fn paginate<T>(&self, params: &crate::models::PaginationParams) -> RepositoryResult<crate::models::PagedResult<T>>
+    async fn paginate<T>(
+        &self,
+        params: &crate::models::PaginationParams,
+    ) -> RepositoryResult<crate::models::PagedResult<T>>
     where
         T: for<'r> FromRow<'r, sqlx::sqlite::SqliteRow> + Send + Unpin,
     {
@@ -306,9 +317,7 @@ impl BaseRepository for ClaudeProviderRepository {
 
         // 查询总数
         let count_query = "SELECT COUNT(*) FROM claude_providers";
-        let total: i64 = sqlx::query_scalar(count_query)
-            .fetch_one(self.pool())
-            .await?;
+        let total: i64 = sqlx::query_scalar(count_query).fetch_one(self.pool()).await?;
 
         // 查询分页数据
         let data_query = "SELECT * FROM claude_providers ORDER BY id DESC LIMIT ? OFFSET ?";
@@ -331,7 +340,12 @@ impl BaseRepository for ClaudeProviderRepository {
         Ok(paged_result)
     }
 
-    async fn search<T>(&self, search_term: &str, search_fields: &[&str], limit: Option<i64>) -> RepositoryResult<Vec<T>>
+    async fn search<T>(
+        &self,
+        search_term: &str,
+        search_fields: &[&str],
+        limit: Option<i64>,
+    ) -> RepositoryResult<Vec<T>>
     where
         T: for<'r> FromRow<'r, sqlx::sqlite::SqliteRow> + Send + Unpin,
     {
@@ -381,9 +395,7 @@ impl BaseRepository for ClaudeProviderRepository {
         }
         query_builder = query_builder.bind(limit);
 
-        let results = query_builder
-            .fetch_all(self.pool())
-            .await?;
+        let results = query_builder.fetch_all(self.pool()).await?;
 
         Ok(results)
     }
@@ -393,9 +405,7 @@ impl BaseRepository for ClaudeProviderRepository {
 
         tracing::debug!("统计Claude供应商总数");
 
-        let count: i64 = sqlx::query_scalar(query)
-            .fetch_one(self.pool())
-            .await?;
+        let count: i64 = sqlx::query_scalar(query).fetch_one(self.pool()).await?;
 
         Ok(count)
     }
@@ -422,7 +432,8 @@ mod tests {
         };
 
         let db_manager = DatabaseManager::new(config).await.unwrap();
-        let crypto_service = crate::crypto::CryptoService::new("test_key_for_claude_provider").unwrap();
+        let crypto_service =
+            crate::crypto::CryptoService::new("test_key_for_claude_provider").unwrap();
 
         ClaudeProviderRepository::new(&db_manager, &crypto_service)
     }

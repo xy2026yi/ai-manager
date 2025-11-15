@@ -55,7 +55,7 @@ async fn test_health_check() {
 async fn test_api_info() {
     let response = reqwest::get("http://127.0.0.1:8080/api/v1/info").await.unwrap();
     assert_eq!(response.status(), 200);
-    
+
     let body: serde_json::Value = response.json().await.unwrap();
     assert_eq!(body["name"], "AI Manager API");
     assert_eq!(body["version"], "1.0.0");
@@ -74,7 +74,7 @@ async fn test_agent_guide_crud() {
 
     let response = client.post("agent-guides", create_data).await;
     assert_eq!(response.status(), 200);
-    
+
     let create_response: serde_json::Value = response.json().await.unwrap();
     assert!(create_response["success"].as_bool().unwrap());
     let guide_id = create_response["data"]["id"].as_i64().unwrap();
@@ -82,7 +82,7 @@ async fn test_agent_guide_crud() {
     // 获取指导文件详情
     let response = client.get(&format!("agent-guides/{}", guide_id)).await;
     assert_eq!(response.status(), 200);
-    
+
     let get_response: serde_json::Value = response.json().await.unwrap();
     assert!(get_response["success"].as_bool().unwrap());
     assert_eq!(get_response["data"]["name"], "集成测试指导文件");
@@ -95,7 +95,7 @@ async fn test_agent_guide_crud() {
 
     let response = client.put(&format!("agent-guides/{}", guide_id), update_data).await;
     assert_eq!(response.status(), 200);
-    
+
     let update_response: serde_json::Value = response.json().await.unwrap();
     assert!(update_response["success"].as_bool().unwrap());
     assert_eq!(update_response["data"]["name"], "更新后的指导文件名称");
@@ -103,7 +103,7 @@ async fn test_agent_guide_crud() {
     // 获取指导文件列表
     let response = client.get("agent-guides").await;
     assert_eq!(response.status(), 200);
-    
+
     let list_response: serde_json::Value = response.json().await.unwrap();
     assert!(list_response["success"].as_bool().unwrap());
     assert!(list_response["data"]["data"].as_array().unwrap().len() > 0);
@@ -111,7 +111,7 @@ async fn test_agent_guide_crud() {
     // 验证指导文件内容
     let response = client.get(&format!("agent-guides/{}/validate", guide_id)).await;
     assert_eq!(response.status(), 200);
-    
+
     let validate_response: serde_json::Value = response.json().await.unwrap();
     assert!(validate_response["success"].as_bool().unwrap());
     assert!(validate_response["data"].as_bool().unwrap());
@@ -119,7 +119,7 @@ async fn test_agent_guide_crud() {
     // 删除指导文件
     let response = client.delete(&format!("agent-guides/{}", guide_id)).await;
     assert_eq!(response.status(), 200);
-    
+
     let delete_response: serde_json::Value = response.json().await.unwrap();
     assert!(delete_response["success"].as_bool().unwrap());
 
@@ -143,7 +143,7 @@ async fn test_mcp_server_crud() {
 
     let response = client.post("mcp-servers", create_data).await;
     assert_eq!(response.status(), 200);
-    
+
     let create_response: serde_json::Value = response.json().await.unwrap();
     assert!(create_response["success"].as_bool().unwrap());
     let server_id = create_response["data"]["id"].as_i64().unwrap();
@@ -151,7 +151,7 @@ async fn test_mcp_server_crud() {
     // 获取服务器详情
     let response = client.get(&format!("mcp-servers/{}", server_id)).await;
     assert_eq!(response.status(), 200);
-    
+
     let get_response: serde_json::Value = response.json().await.unwrap();
     assert!(get_response["success"].as_bool().unwrap());
     assert_eq!(get_response["data"]["name"], "集成测试MCP服务器");
@@ -159,14 +159,14 @@ async fn test_mcp_server_crud() {
     // 测试服务器配置
     let response = client.get(&format!("mcp-servers/{}/test", server_id)).await;
     assert_eq!(response.status(), 200);
-    
+
     let test_response: serde_json::Value = response.json().await.unwrap();
     assert!(test_response["success"].as_bool().unwrap());
 
     // 获取服务器列表
     let response = client.get("mcp-servers").await;
     assert_eq!(response.status(), 200);
-    
+
     let list_response: serde_json::Value = response.json().await.unwrap();
     assert!(list_response["success"].as_bool().unwrap());
     assert!(list_response["data"]["data"].as_array().unwrap().len() > 0);
@@ -174,7 +174,7 @@ async fn test_mcp_server_crud() {
     // 删除服务器
     let response = client.delete(&format!("mcp-servers/{}", server_id)).await;
     assert_eq!(response.status(), 200);
-    
+
     let delete_response: serde_json::Value = response.json().await.unwrap();
     assert!(delete_response["success"].as_bool().unwrap());
 }
@@ -194,7 +194,7 @@ async fn test_common_config_crud() {
 
     let response = client.post("common-configs", create_data).await;
     assert_eq!(response.status(), 200);
-    
+
     let create_response: serde_json::Value = response.json().await.unwrap();
     assert!(create_response["success"].as_bool().unwrap());
     let config_id = create_response["data"]["id"].as_i64().unwrap();
@@ -202,7 +202,7 @@ async fn test_common_config_crud() {
     // 获取配置详情
     let response = client.get(&format!("common-configs/{}", config_id)).await;
     assert_eq!(response.status(), 200);
-    
+
     let get_response: serde_json::Value = response.json().await.unwrap();
     assert!(get_response["success"].as_bool().unwrap());
     assert_eq!(get_response["data"]["key"], "integration_test_key");
@@ -210,7 +210,7 @@ async fn test_common_config_crud() {
     // 根据key获取配置
     let response = client.get("common-configs/key/integration_test_key").await;
     assert_eq!(response.status(), 200);
-    
+
     let key_response: serde_json::Value = response.json().await.unwrap();
     assert!(key_response["success"].as_bool().unwrap());
     assert_eq!(key_response["data"]["key"], "integration_test_key");
@@ -224,14 +224,14 @@ async fn test_common_config_crud() {
 
     let response = client.post("common-configs/batch", batch_data).await;
     assert_eq!(response.status(), 200);
-    
+
     let batch_response: serde_json::Value = response.json().await.unwrap();
     assert!(batch_response["success"].as_bool().unwrap());
 
     // 验证配置值
     let response = client.get(&format!("common-configs/{}/validate", config_id)).await;
     assert_eq!(response.status(), 200);
-    
+
     let validate_response: serde_json::Value = response.json().await.unwrap();
     assert!(validate_response["success"].as_bool().unwrap());
     assert!(validate_response["data"].as_bool().unwrap());
@@ -239,7 +239,7 @@ async fn test_common_config_crud() {
     // 删除配置
     let response = client.delete(&format!("common-configs/{}", config_id)).await;
     assert_eq!(response.status(), 200);
-    
+
     let delete_response: serde_json::Value = response.json().await.unwrap();
     assert!(delete_response["success"].as_bool().unwrap());
 }
@@ -251,7 +251,7 @@ async fn test_stats_endpoints() {
     // 测试Agent指导文件统计
     let response = client.get("agent-guides/stats").await;
     assert_eq!(response.status(), 200);
-    
+
     let stats_response: serde_json::Value = response.json().await.unwrap();
     assert!(stats_response["success"].as_bool().unwrap());
     assert!(stats_response["data"]["total"].is_number());
@@ -259,7 +259,7 @@ async fn test_stats_endpoints() {
     // 测试MCP服务器统计
     let response = client.get("mcp-servers/stats").await;
     assert_eq!(response.status(), 200);
-    
+
     let stats_response: serde_json::Value = response.json().await.unwrap();
     assert!(stats_response["success"].as_bool().unwrap());
     assert!(stats_response["data"]["total"].is_number());
@@ -267,7 +267,7 @@ async fn test_stats_endpoints() {
     // 测试通用配置统计
     let response = client.get("common-configs/stats").await;
     assert_eq!(response.status(), 200);
-    
+
     let stats_response: serde_json::Value = response.json().await.unwrap();
     assert!(stats_response["success"].as_bool().unwrap());
     assert!(stats_response["data"]["total"].is_number());
@@ -312,20 +312,20 @@ async fn test_search_and_pagination() {
     // 测试搜索功能
     let response = client.get("agent-guides?search=test").await;
     assert_eq!(response.status(), 200);
-    
+
     let search_response: serde_json::Value = response.json().await.unwrap();
     assert!(search_response["success"].as_bool().unwrap());
 
     let response = client.get("mcp-servers?search=test").await;
     assert_eq!(response.status(), 200);
-    
+
     let search_response: serde_json::Value = response.json().await.unwrap();
     assert!(search_response["success"].as_bool().unwrap());
 
     // 测试分页功能
     let response = client.get("agent-guides?page=1&limit=5").await;
     assert_eq!(response.status(), 200);
-    
+
     let page_response: serde_json::Value = response.json().await.unwrap();
     assert!(page_response["success"].as_bool().unwrap());
     assert_eq!(page_response["data"]["pagination"]["page"], 1);
@@ -334,19 +334,19 @@ async fn test_search_and_pagination() {
     // 测试筛选功能
     let response = client.get("agent-guides?guide_type=only").await;
     assert_eq!(response.status(), 200);
-    
+
     let filter_response: serde_json::Value = response.json().await.unwrap();
     assert!(filter_response["success"].as_bool().unwrap());
 
     let response = client.get("mcp-servers?server_type=stdio").await;
     assert_eq!(response.status(), 200);
-    
+
     let filter_response: serde_json::Value = response.json().await.unwrap();
     assert!(filter_response["success"].as_bool().unwrap());
 
     let response = client.get("common-configs?category=test").await;
     assert_eq!(response.status(), 200);
-    
+
     let filter_response: serde_json::Value = response.json().await.unwrap();
     assert!(filter_response["success"].as_bool().unwrap());
 }

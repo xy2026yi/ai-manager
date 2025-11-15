@@ -2,7 +2,7 @@
 //!
 //! 这个模块验证Rust实现的加密服务与Python的cryptography.fernet完全兼容
 
-use crate::crypto::{CryptoService, CryptoError};
+use crate::crypto::{CryptoError, CryptoService};
 
 /// 运行完整的Python兼容性测试
 pub fn run_python_compatibility_tests() -> Result<(), CryptoError> {
@@ -106,9 +106,15 @@ mod tests {
         let edge_cases = vec![
             ("very_long_string", "A".repeat(10000)),
             ("unicode", "测试中文字符串和各种符号🎉🚀💻".to_string()),
-            ("json", "{\"key\":\"value\",\"number\":42,\"array\":[1,2,3]}".to_string()),
+            (
+                "json",
+                "{\"key\":\"value\",\"number\":42,\"array\":[1,2,3]}".to_string(),
+            ),
             ("newlines", "Line 1\nLine 2\r\nLine 3".to_string()),
-            ("special_chars", "!@#$%^&*()_+-=[]{}|;':\",./<>?".to_string()),
+            (
+                "special_chars",
+                "!@#$%^&*()_+-=[]{}|;':\",./<>?".to_string(),
+            ),
         ];
 
         for (name, data) in edge_cases {

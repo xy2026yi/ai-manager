@@ -2,11 +2,11 @@
 //
 // 提供Agent指导文件的特定数据访问操作
 
-use sqlx::{FromRow, SqlitePool};
-use crate::repositories::base_repository::{BaseRepository, RepositoryResult, RepositoryError};
 use crate::crypto::CryptoService;
 use crate::database::DatabaseManager;
 use crate::models::{AgentGuide, CreateAgentGuideRequest, UpdateAgentGuideRequest};
+use crate::repositories::base_repository::{BaseRepository, RepositoryError, RepositoryResult};
+use sqlx::{FromRow, SqlitePool};
 
 /// Agent指导文件Repository
 pub struct AgentGuideRepository {
@@ -24,7 +24,10 @@ impl AgentGuideRepository {
     }
 
     /// 创建Agent指导文件记录
-    pub async fn create_agent_guide(&self, request: &CreateAgentGuideRequest) -> RepositoryResult<i64> {
+    pub async fn create_agent_guide(
+        &self,
+        request: &CreateAgentGuideRequest,
+    ) -> RepositoryResult<i64> {
         let query = r#"
             INSERT INTO agent_guides (
                 name, type, text, created_at, updated_at
@@ -48,11 +51,18 @@ impl AgentGuideRepository {
     }
 
     /// 更新Agent指导文件记录
-    pub async fn update_agent_guide(&self, id: i64, request: &UpdateAgentGuideRequest) -> RepositoryResult<bool> {
+    pub async fn update_agent_guide(
+        &self,
+        id: i64,
+        request: &UpdateAgentGuideRequest,
+    ) -> RepositoryResult<bool> {
         // 获取现有记录
         let existing = self.find_by_id::<AgentGuide>(id).await?;
         if existing.is_none() {
-            return Err(RepositoryError::NotFound(format!("Agent指导文件 ID {} 不存在", id)));
+            return Err(RepositoryError::NotFound(format!(
+                "Agent指导文件 ID {} 不存在",
+                id
+            )));
         }
 
         let query = r#"
@@ -86,7 +96,11 @@ impl AgentGuideRepository {
     }
 
     /// 搜索Agent指导文件
-    pub async fn search_agent_guides(&self, search_term: &str, limit: Option<i64>) -> RepositoryResult<Vec<AgentGuide>> {
+    pub async fn search_agent_guides(
+        &self,
+        search_term: &str,
+        limit: Option<i64>,
+    ) -> RepositoryResult<Vec<AgentGuide>> {
         let search_fields = vec!["name", "type", "text"];
         self.search::<AgentGuide>(search_term, &search_fields, limit).await
     }
@@ -112,7 +126,10 @@ impl AgentGuideRepository {
     pub async fn validate_guide_content(&self, id: i64) -> RepositoryResult<bool> {
         let guide = self.find_by_id_decrypted(id).await?;
         if guide.is_none() {
-            return Err(RepositoryError::NotFound(format!("Agent指导文件 ID {} 不存在", id)));
+            return Err(RepositoryError::NotFound(format!(
+                "Agent指导文件 ID {} 不存在",
+                id
+            )));
         }
 
         let guide = guide.unwrap();
@@ -132,10 +149,7 @@ impl AgentGuideRepository {
     pub async fn count_by_type(&self, guide_type: &str) -> RepositoryResult<i64> {
         let query = "SELECT COUNT(*) FROM agent_guides WHERE type = ?";
 
-        let count: i64 = sqlx::query_scalar(query)
-            .bind(guide_type)
-            .fetch_one(&self.pool)
-            .await?;
+        let count: i64 = sqlx::query_scalar(query).bind(guide_type).fetch_one(&self.pool).await?;
 
         Ok(count)
     }
@@ -158,10 +172,7 @@ impl BaseRepository for AgentGuideRepository {
     where
         T: for<'r> FromRow<'r, sqlx::sqlite::SqliteRow> + Send + Unpin,
     {
-        let query = format!(
-            "SELECT * FROM {} WHERE id = ?",
-            Self::table_name()
-        );
+        let query = format!("SELECT * FROM {} WHERE id = ?", Self::table_name());
 
         tracing::debug!(
             table_name = %Self::table_name(),
@@ -170,10 +181,7 @@ impl BaseRepository for AgentGuideRepository {
             query
         );
 
-        let result = sqlx::query_as::<_, T>(&query)
-            .bind(id)
-            .fetch_optional(self.pool())
-            .await?;
+        let result = sqlx::query_as::<_, T>(&query).bind(id).fetch_optional(self.pool()).await?;
 
         Ok(result)
     }
@@ -184,7 +192,7 @@ impl BaseRepository for AgentGuideRepository {
     {
         // 对于Agent指导文件，使用专用的创建方法
         Err(RepositoryError::Validation(
-            "请使用 create_agent_guide 方法".to_string()
+            "请使用 create_agent_guide 方法".to_string(),
         ))
     }
 
@@ -194,7 +202,7 @@ impl BaseRepository for AgentGuideRepository {
     {
         // 对于Agent指导文件，使用专用的更新方法
         Err(RepositoryError::Validation(
-            "请使用 update_agent_guide 方法".to_string()
+            "请使用 update_agent_guide 方法".to_string(),
         ))
     }
 
@@ -206,10 +214,7 @@ impl BaseRepository for AgentGuideRepository {
             "删除Agent指导文件"
         );
 
-        let result = sqlx::query(query)
-            .bind(id)
-            .execute(self.pool())
-            .await?;
+        let result = sqlx::query(query).bind(id).execute(self.pool()).await?;
 
         Ok(result.rows_affected() > 0)
     }
@@ -222,14 +227,15 @@ impl BaseRepository for AgentGuideRepository {
 
         tracing::debug!("获取Agent指导文件列表");
 
-        let results = sqlx::query_as::<_, T>(query)
-            .fetch_all(self.pool())
-            .await?;
+        let results = sqlx::query_as::<_, T>(query).fetch_all(self.pool()).await?;
 
         Ok(results)
     }
 
-    async fn paginate<T>(&self, params: &crate::models::PaginationParams) -> RepositoryResult<crate::models::PagedResult<T>>
+    async fn paginate<T>(
+        &self,
+        params: &crate::models::PaginationParams,
+    ) -> RepositoryResult<crate::models::PagedResult<T>>
     where
         T: for<'r> FromRow<'r, sqlx::sqlite::SqliteRow> + Send + Unpin,
     {
@@ -239,9 +245,7 @@ impl BaseRepository for AgentGuideRepository {
 
         // 查询总数
         let count_query = "SELECT COUNT(*) FROM agent_guides";
-        let total: i64 = sqlx::query_scalar(count_query)
-            .fetch_one(self.pool())
-            .await?;
+        let total: i64 = sqlx::query_scalar(count_query).fetch_one(self.pool()).await?;
 
         // 查询分页数据
         let data_query = "SELECT * FROM agent_guides ORDER BY id DESC LIMIT ? OFFSET ?";
@@ -264,7 +268,12 @@ impl BaseRepository for AgentGuideRepository {
         Ok(paged_result)
     }
 
-    async fn search<T>(&self, search_term: &str, search_fields: &[&str], limit: Option<i64>) -> RepositoryResult<Vec<T>>
+    async fn search<T>(
+        &self,
+        search_term: &str,
+        search_fields: &[&str],
+        limit: Option<i64>,
+    ) -> RepositoryResult<Vec<T>>
     where
         T: for<'r> FromRow<'r, sqlx::sqlite::SqliteRow> + Send + Unpin,
     {
@@ -312,9 +321,7 @@ impl BaseRepository for AgentGuideRepository {
         }
         query_builder = query_builder.bind(limit);
 
-        let results = query_builder
-            .fetch_all(self.pool())
-            .await?;
+        let results = query_builder.fetch_all(self.pool()).await?;
 
         Ok(results)
     }
@@ -324,9 +331,7 @@ impl BaseRepository for AgentGuideRepository {
 
         tracing::debug!("统计Agent指导文件总数");
 
-        let count: i64 = sqlx::query_scalar(query)
-            .fetch_one(self.pool())
-            .await?;
+        let count: i64 = sqlx::query_scalar(query).fetch_one(self.pool()).await?;
 
         Ok(count)
     }

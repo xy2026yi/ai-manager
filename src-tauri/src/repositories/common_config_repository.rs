@@ -2,11 +2,11 @@
 //
 // 提供通用配置的特定数据访问操作
 
-use sqlx::{FromRow, SqlitePool};
-use crate::repositories::base_repository::{BaseRepository, RepositoryResult, RepositoryError};
 use crate::crypto::CryptoService;
 use crate::database::DatabaseManager;
 use crate::models::{CommonConfig, CreateCommonConfigRequest, UpdateCommonConfigRequest};
+use crate::repositories::base_repository::{BaseRepository, RepositoryError, RepositoryResult};
+use sqlx::{FromRow, SqlitePool};
 
 /// 通用配置Repository
 pub struct CommonConfigRepository {
@@ -24,7 +24,10 @@ impl CommonConfigRepository {
     }
 
     /// 创建通用配置记录
-    pub async fn create_common_config(&self, request: &CreateCommonConfigRequest) -> RepositoryResult<i64> {
+    pub async fn create_common_config(
+        &self,
+        request: &CreateCommonConfigRequest,
+    ) -> RepositoryResult<i64> {
         let query = r#"
             INSERT INTO common_configs (
                 key, value, description, category, is_active, created_at, updated_at
@@ -50,11 +53,18 @@ impl CommonConfigRepository {
     }
 
     /// 更新通用配置记录
-    pub async fn update_common_config(&self, id: i64, request: &UpdateCommonConfigRequest) -> RepositoryResult<bool> {
+    pub async fn update_common_config(
+        &self,
+        id: i64,
+        request: &UpdateCommonConfigRequest,
+    ) -> RepositoryResult<bool> {
         // 获取现有记录
         let existing = self.find_by_id::<CommonConfig>(id).await?;
         if existing.is_none() {
-            return Err(RepositoryError::NotFound(format!("通用配置 ID {} 不存在", id)));
+            return Err(RepositoryError::NotFound(format!(
+                "通用配置 ID {} 不存在",
+                id
+            )));
         }
 
         let query = r#"
@@ -127,43 +137,46 @@ impl CommonConfigRepository {
 
     /// 获取活跃配置
     pub async fn list_active_configs(&self) -> RepositoryResult<Vec<CommonConfig>> {
-        let query = "SELECT * FROM common_configs WHERE is_active = 1 ORDER BY category ASC, key ASC";
+        let query =
+            "SELECT * FROM common_configs WHERE is_active = 1 ORDER BY category ASC, key ASC";
 
         tracing::debug!("获取活跃配置列表");
 
-        let results = sqlx::query_as::<_, CommonConfig>(query)
-            .fetch_all(&self.pool)
-            .await?;
+        let results = sqlx::query_as::<_, CommonConfig>(query).fetch_all(&self.pool).await?;
 
         Ok(results)
     }
 
     /// 搜索通用配置
-    pub async fn search_common_configs(&self, search_term: &str, limit: Option<i64>) -> RepositoryResult<Vec<CommonConfig>> {
+    pub async fn search_common_configs(
+        &self,
+        search_term: &str,
+        limit: Option<i64>,
+    ) -> RepositoryResult<Vec<CommonConfig>> {
         let search_fields = vec!["key", "value", "description", "category"];
         self.search::<CommonConfig>(search_term, &search_fields, limit).await
     }
 
     /// 根据key更新配置值（便捷方法）
     pub async fn update_config_value(&self, key: &str, value: &str) -> RepositoryResult<bool> {
-        let query = "UPDATE common_configs SET value = ?, updated_at = datetime('now') WHERE key = ?";
+        let query =
+            "UPDATE common_configs SET value = ?, updated_at = datetime('now') WHERE key = ?";
 
         tracing::info!(
             key = %key,
             "根据key更新配置值"
         );
 
-        let result = sqlx::query(query)
-            .bind(value)
-            .bind(key)
-            .execute(&self.pool)
-            .await?;
+        let result = sqlx::query(query).bind(value).bind(key).execute(&self.pool).await?;
 
         Ok(result.rows_affected() > 0)
     }
 
     /// 批量更新配置
-    pub async fn batch_update_configs(&self, configs: &[(String, String)]) -> RepositoryResult<usize> {
+    pub async fn batch_update_configs(
+        &self,
+        configs: &[(String, String)],
+    ) -> RepositoryResult<usize> {
         let mut updated_count = 0;
 
         for (key, value) in configs {
@@ -185,7 +198,10 @@ impl CommonConfigRepository {
     pub async fn validate_config_value(&self, id: i64) -> RepositoryResult<bool> {
         let config = self.find_by_id_decrypted(id).await?;
         if config.is_none() {
-            return Err(RepositoryError::NotFound(format!("通用配置 ID {} 不存在", id)));
+            return Err(RepositoryError::NotFound(format!(
+                "通用配置 ID {} 不存在",
+                id
+            )));
         }
 
         let config = config.unwrap();
@@ -211,10 +227,7 @@ impl CommonConfigRepository {
     pub async fn count_by_category(&self, category: &str) -> RepositoryResult<i64> {
         let query = "SELECT COUNT(*) FROM common_configs WHERE category = ?";
 
-        let count: i64 = sqlx::query_scalar(query)
-            .bind(category)
-            .fetch_one(&self.pool)
-            .await?;
+        let count: i64 = sqlx::query_scalar(query).bind(category).fetch_one(&self.pool).await?;
 
         Ok(count)
     }
@@ -223,9 +236,7 @@ impl CommonConfigRepository {
     pub async fn count_active(&self) -> RepositoryResult<i64> {
         let query = "SELECT COUNT(*) FROM common_configs WHERE is_active = 1";
 
-        let count: i64 = sqlx::query_scalar(query)
-            .fetch_one(&self.pool)
-            .await?;
+        let count: i64 = sqlx::query_scalar(query).fetch_one(&self.pool).await?;
 
         Ok(count)
     }
@@ -236,9 +247,7 @@ impl CommonConfigRepository {
 
         tracing::debug!("获取所有配置类别");
 
-        let results = sqlx::query_scalar(query)
-            .fetch_all(&self.pool)
-            .await?;
+        let results = sqlx::query_scalar(query).fetch_all(&self.pool).await?;
 
         Ok(results)
     }
@@ -261,10 +270,7 @@ impl BaseRepository for CommonConfigRepository {
     where
         T: for<'r> FromRow<'r, sqlx::sqlite::SqliteRow> + Send + Unpin,
     {
-        let query = format!(
-            "SELECT * FROM {} WHERE id = ?",
-            Self::table_name()
-        );
+        let query = format!("SELECT * FROM {} WHERE id = ?", Self::table_name());
 
         tracing::debug!(
             table_name = %Self::table_name(),
@@ -273,10 +279,7 @@ impl BaseRepository for CommonConfigRepository {
             query
         );
 
-        let result = sqlx::query_as::<_, T>(&query)
-            .bind(id)
-            .fetch_optional(self.pool())
-            .await?;
+        let result = sqlx::query_as::<_, T>(&query).bind(id).fetch_optional(self.pool()).await?;
 
         Ok(result)
     }
@@ -287,7 +290,7 @@ impl BaseRepository for CommonConfigRepository {
     {
         // 对于通用配置，使用专用的创建方法
         Err(RepositoryError::Validation(
-            "请使用 create_common_config 方法".to_string()
+            "请使用 create_common_config 方法".to_string(),
         ))
     }
 
@@ -297,7 +300,7 @@ impl BaseRepository for CommonConfigRepository {
     {
         // 对于通用配置，使用专用的更新方法
         Err(RepositoryError::Validation(
-            "请使用 update_common_config 方法".to_string()
+            "请使用 update_common_config 方法".to_string(),
         ))
     }
 
@@ -309,10 +312,7 @@ impl BaseRepository for CommonConfigRepository {
             "删除通用配置"
         );
 
-        let result = sqlx::query(query)
-            .bind(id)
-            .execute(self.pool())
-            .await?;
+        let result = sqlx::query(query).bind(id).execute(self.pool()).await?;
 
         Ok(result.rows_affected() > 0)
     }
@@ -325,14 +325,15 @@ impl BaseRepository for CommonConfigRepository {
 
         tracing::debug!("获取通用配置列表");
 
-        let results = sqlx::query_as::<_, T>(query)
-            .fetch_all(self.pool())
-            .await?;
+        let results = sqlx::query_as::<_, T>(query).fetch_all(self.pool()).await?;
 
         Ok(results)
     }
 
-    async fn paginate<T>(&self, params: &crate::models::PaginationParams) -> RepositoryResult<crate::models::PagedResult<T>>
+    async fn paginate<T>(
+        &self,
+        params: &crate::models::PaginationParams,
+    ) -> RepositoryResult<crate::models::PagedResult<T>>
     where
         T: for<'r> FromRow<'r, sqlx::sqlite::SqliteRow> + Send + Unpin,
     {
@@ -342,12 +343,11 @@ impl BaseRepository for CommonConfigRepository {
 
         // 查询总数
         let count_query = "SELECT COUNT(*) FROM common_configs";
-        let total: i64 = sqlx::query_scalar(count_query)
-            .fetch_one(self.pool())
-            .await?;
+        let total: i64 = sqlx::query_scalar(count_query).fetch_one(self.pool()).await?;
 
         // 查询分页数据
-        let data_query = "SELECT * FROM common_configs ORDER BY category ASC, key ASC LIMIT ? OFFSET ?";
+        let data_query =
+            "SELECT * FROM common_configs ORDER BY category ASC, key ASC LIMIT ? OFFSET ?";
 
         tracing::debug!(
             page = %page,
@@ -367,7 +367,12 @@ impl BaseRepository for CommonConfigRepository {
         Ok(paged_result)
     }
 
-    async fn search<T>(&self, search_term: &str, search_fields: &[&str], limit: Option<i64>) -> RepositoryResult<Vec<T>>
+    async fn search<T>(
+        &self,
+        search_term: &str,
+        search_fields: &[&str],
+        limit: Option<i64>,
+    ) -> RepositoryResult<Vec<T>>
     where
         T: for<'r> FromRow<'r, sqlx::sqlite::SqliteRow> + Send + Unpin,
     {
@@ -415,9 +420,7 @@ impl BaseRepository for CommonConfigRepository {
         }
         query_builder = query_builder.bind(limit);
 
-        let results = query_builder
-            .fetch_all(self.pool())
-            .await?;
+        let results = query_builder.fetch_all(self.pool()).await?;
 
         Ok(results)
     }
@@ -427,9 +430,7 @@ impl BaseRepository for CommonConfigRepository {
 
         tracing::debug!("统计通用配置总数");
 
-        let count: i64 = sqlx::query_scalar(query)
-            .fetch_one(self.pool())
-            .await?;
+        let count: i64 = sqlx::query_scalar(query).fetch_one(self.pool()).await?;
 
         Ok(count)
     }
@@ -456,7 +457,8 @@ mod tests {
         };
 
         let db_manager = DatabaseManager::new(config).await.unwrap();
-        let crypto_service = crate::crypto::CryptoService::new("test_key_for_common_config").unwrap();
+        let crypto_service =
+            crate::crypto::CryptoService::new("test_key_for_common_config").unwrap();
 
         CommonConfigRepository::new(&db_manager, &crypto_service)
     }

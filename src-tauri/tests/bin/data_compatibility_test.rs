@@ -3,7 +3,12 @@
 // 独立运行数据迁移和加密兼容性验证测试
 
 use std::env;
-use migration_ai_manager_lib::tests::data_compatibility_runner::run_compatibility_tests;
+
+// 将测试模块作为路径引入
+#[path = "../data_compatibility_runner.rs"]
+mod data_compatibility_runner;
+
+use data_compatibility_runner::run_compatibility_tests;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

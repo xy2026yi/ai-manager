@@ -1,10 +1,24 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-mod test_deps;
-mod models;
+//! AI Manager 主程序
+//!
+//! 从 Python/FastAPI 迁移到 Rust/Tauri 的桌面应用程序
+
 mod crypto;
+mod models;
 mod python_compatibility_test;
+mod test_deps;
+
+// 导入模块
+mod api;
+mod database;
+mod logging;
+mod migration_tool;
+mod repositories;
+mod services;
+
+use logging::init_development;
 
 // Tauri 基础命令
 #[tauri::command]
@@ -12,12 +26,27 @@ fn greet(name: &str) -> String {
     format!("你好, {}! AI Manager 后端已就绪。", name)
 }
 
+/// 主函数
+///
+/// 初始化日志系统并启动 Tauri 应用程序
 fn main() {
-    // 初始化日志系统
-    tracing_subscriber::fmt().init();
+    // 初始化开发环境日志系统
+    if let Err(e) = init_development() {
+        eprintln!("日志系统初始化失败: {}", e);
+    }
 
+    // 记录应用启动信息
+    tracing::info!("AI Manager 应用程序启动");
+    tracing::info!("版本: 0.1.0");
+    tracing::info!("环境: 开发模式");
+
+    // 构建并运行 Tauri 应用
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![greet])
         .run(tauri::generate_context!())
+        .map_err(|e| {
+            tracing::error!("应用启动失败: {}", e);
+            e
+        })
         .expect("启动 Tauri 应用时出错");
 }

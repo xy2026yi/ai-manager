@@ -5,16 +5,18 @@
 use axum::{
     extract::{Path, Query, State},
     response::Json,
-    routing::{get, post, delete, put},
+    routing::{delete, get, post, put},
     Router,
 };
 use serde::Deserialize;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
 use crate::api::error::ApiError;
 use crate::api::responses::{ApiResponse, PagedResponse};
-use crate::models::{ClaudeProvider, CreateClaudeProviderRequest, UpdateClaudeProviderRequest, PaginationParams};
-use crate::services::claude_service::{ClaudeProviderService, ClaudeServiceError};
+use crate::models::{
+    ClaudeProvider, CreateClaudeProviderRequest, PaginationParams, UpdateClaudeProviderRequest,
+};
+use crate::services::claude_service::ClaudeServiceError;
 
 // 使用服务器模块中的ApiState
 use crate::api::server::ApiState;
@@ -24,11 +26,17 @@ impl From<ClaudeServiceError> for ApiError {
     fn from(err: ClaudeServiceError) -> Self {
         match err {
             ClaudeServiceError::Validation(msg) => ApiError::Validation(msg),
-            ClaudeServiceError::BusinessRule(msg) => ApiError::BusinessRule(msg),
-            ClaudeServiceError::Repository(repo_err) => ApiError::Database(repo_err.to_string()),
-            ClaudeServiceError::ProviderNotFound(id) => ApiError::NotFound(format!("供应商 {} 不存在", id)),
-            ClaudeServiceError::NameAlreadyExists(name) => ApiError::Conflict(format!("供应商名称 '{}' 已存在", name)),
-            ClaudeServiceError::NoActiveProvider => ApiError::NotFound("没有启用的供应商".to_string()),
+            ClaudeServiceError::BusinessRule(msg) => ApiError::BusinessRule { message: msg },
+            ClaudeServiceError::Repository(repo_err) => ApiError::Database { message: repo_err.to_string() },
+            ClaudeServiceError::ProviderNotFound(id) => {
+                ApiError::NotFound { resource: format!("供应商 {} 不存在", id) }
+            }
+            ClaudeServiceError::NameAlreadyExists(name) => {
+                ApiError::Conflict { message: format!("供应商名称 '{}' 已存在", name) }
+            }
+            ClaudeServiceError::NoActiveProvider => {
+                ApiError::NotFound { resource: "没有启用的供应商".to_string() }
+            }
         }
     }
 }
@@ -80,14 +88,16 @@ pub async fn create_claude_provider(
 
         Ok(Json(ApiResponse::success_with_message(
             provider,
-            "Claude供应商创建成功".to_string()
+            "Claude供应商创建成功".to_string(),
         )))
     } else {
         error!(
             id = %id,
             "创建Claude供应商后无法找到记录"
         );
-        Err(ApiError::Internal("创建Claude供应商后无法找到记录".to_string()))
+        Err(ApiError::Internal {
+            message: "创建Claude供应商后无法找到记录".to_string(),
+        })
     }
 }
 
@@ -111,7 +121,7 @@ pub async fn get_claude_provider(
 
             Ok(Json(ApiResponse::success_with_message(
                 provider,
-                "获取Claude供应商详情成功".to_string()
+                "获取Claude供应商详情成功".to_string(),
             )))
         }
         Ok(None) => {
@@ -119,7 +129,7 @@ pub async fn get_claude_provider(
                 id = %id,
                 "Claude供应商不存在"
             );
-            Err(ApiError::NotFound("Claude供应商不存在".to_string()))
+            Err(ApiError::NotFound { resource: "Claude供应商不存在".to_string() })
         }
         Err(e) => {
             error!(
@@ -158,7 +168,7 @@ pub async fn update_claude_provider(
             id = %id,
             "更新Claude供应商未影响任何记录"
         );
-        return Err(ApiError::Internal("更新Claude供应商失败".to_string()));
+        return Err(ApiError::Internal { message: "更新Claude供应商失败".to_string() });
     }
 
     // 获取更新后的记录
@@ -178,14 +188,16 @@ pub async fn update_claude_provider(
 
         Ok(Json(ApiResponse::success_with_message(
             provider,
-            "Claude供应商更新成功".to_string()
+            "Claude供应商更新成功".to_string(),
         )))
     } else {
         error!(
             id = %id,
             "更新Claude供应商后无法找到记录"
         );
-        Err(ApiError::Internal("更新Claude供应商后无法找到记录".to_string()))
+        Err(ApiError::Internal {
+            message: "更新Claude供应商后无法找到记录".to_string(),
+        })
     }
 }
 
@@ -213,7 +225,7 @@ pub async fn delete_claude_provider(
             id = %id,
             "删除Claude供应商未影响任何记录"
         );
-        return Err(ApiError::Internal("删除Claude供应商失败".to_string()));
+        return Err(ApiError::Internal { message: "删除Claude供应商失败".to_string() });
     }
 
     info!(
@@ -223,7 +235,7 @@ pub async fn delete_claude_provider(
 
     Ok(Json(ApiResponse::success_with_message(
         (),
-        "Claude供应商删除成功".to_string()
+        "Claude供应商删除成功".to_string(),
     )))
 }
 
@@ -243,14 +255,15 @@ pub async fn list_claude_providers(
     let result = if let Some(search_term) = query.search {
         // 搜索模式
         let limit = query.limit.or(Some(50));
-        let providers = state.claude_service.search_providers(&search_term, limit).await.map_err(|e| {
-            error!(
-                error = %e,
-                search_term = %search_term,
-                "搜索Claude供应商失败"
-            );
-            ApiError::from(e)
-        })?;
+        let providers =
+            state.claude_service.search_providers(&search_term, limit).await.map_err(|e| {
+                error!(
+                    error = %e,
+                    search_term = %search_term,
+                    "搜索Claude供应商失败"
+                );
+                ApiError::from(e)
+            })?;
 
         // 转换为分页响应格式
         let total = providers.len() as i64;
@@ -285,11 +298,8 @@ pub async fn list_claude_providers(
         paged_result
     } else {
         // 分页获取所有供应商
-        let pagination_params = PaginationParams {
-            page: query.page,
-            limit: query.limit,
-            offset: query.offset,
-        };
+        let pagination_params =
+            PaginationParams { page: query.page, limit: query.limit, offset: query.offset };
 
         state.claude_service.list_providers(pagination_params).await.map_err(|e| {
             error!(
@@ -302,7 +312,7 @@ pub async fn list_claude_providers(
 
     let paged_response = crate::api::responses::PagedResponse::from_paged_result_with_message(
         result,
-        "获取Claude供应商列表成功".to_string()
+        "获取Claude供应商列表成功".to_string(),
     );
 
     Ok(Json(ApiResponse::success(paged_response)))
@@ -326,10 +336,14 @@ pub async fn test_claude_provider_connection(
                 "Claude供应商连接测试完成"
             );
 
-            let message = if success { "连接测试成功" } else { "连接测试失败" };
+            let message = if success {
+                "连接测试成功"
+            } else {
+                "连接测试失败"
+            };
             Ok(Json(ApiResponse::success_with_message(
                 success,
-                message.to_string()
+                message.to_string(),
             )))
         }
         Err(e) => {
@@ -357,13 +371,11 @@ pub async fn get_claude_provider_stats(
         ApiError::from(e)
     })?;
 
-    info!(
-        "Claude供应商统计信息获取完成"
-    );
+    info!("Claude供应商统计信息获取完成");
 
     Ok(Json(ApiResponse::success_with_message(
         stats,
-        "获取Claude供应商统计信息成功".to_string()
+        "获取Claude供应商统计信息成功".to_string(),
     )))
 }
 
@@ -391,7 +403,7 @@ pub async fn enable_claude_provider(
             id = %id,
             "启用Claude供应商未影响任何记录"
         );
-        return Err(ApiError::Internal("启用Claude供应商失败".to_string()));
+        return Err(ApiError::Internal { message: "启用Claude供应商失败".to_string() });
     }
 
     info!(
@@ -401,7 +413,7 @@ pub async fn enable_claude_provider(
 
     Ok(Json(ApiResponse::success_with_message(
         (),
-        "Claude供应商启用成功".to_string()
+        "Claude供应商启用成功".to_string(),
     )))
 }
 
@@ -429,7 +441,7 @@ pub async fn disable_claude_provider(
             id = %id,
             "禁用Claude供应商未影响任何记录"
         );
-        return Err(ApiError::Internal("禁用Claude供应商失败".to_string()));
+        return Err(ApiError::Internal { message: "禁用Claude供应商失败".to_string() });
     }
 
     info!(
@@ -439,7 +451,7 @@ pub async fn disable_claude_provider(
 
     Ok(Json(ApiResponse::success_with_message(
         (),
-        "Claude供应商禁用成功".to_string()
+        "Claude供应商禁用成功".to_string(),
     )))
 }
 
@@ -459,12 +471,12 @@ pub async fn get_current_claude_provider(
 
             Ok(Json(ApiResponse::success_with_message(
                 provider,
-                "获取当前启用的Claude供应商成功".to_string()
+                "获取当前启用的Claude供应商成功".to_string(),
             )))
         }
         Ok(None) => {
             warn!("没有找到启用的Claude供应商");
-            Err(ApiError::NotFound("没有启用的Claude供应商".to_string()))
+            Err(ApiError::NotFound { resource: "没有启用的Claude供应商".to_string() })
         }
         Err(e) => {
             error!(

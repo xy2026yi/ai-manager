@@ -5,10 +5,10 @@
 // 支持命令行参数配置和优雅关闭
 
 use clap::{Arg, Command};
-use migration_ai_manager_lib::{ApiServer, api::server::ApiServerConfig};
+use migration_ai_manager_lib::{api::server::ApiServerConfig, ApiServer};
 use std::net::SocketAddr;
 use tokio::signal;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
@@ -23,7 +23,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .long("host")
                 .value_name("HOST")
                 .help("服务器监听地址")
-                .default_value("127.0.0.1")
+                .default_value("127.0.0.1"),
         )
         .arg(
             Arg::new("port")
@@ -32,19 +32,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .value_name("PORT")
                 .help("服务器监听端口")
                 .value_parser(clap::value_parser!(u16))
-                .default_value("8080")
+                .default_value("8080"),
         )
         .arg(
             Arg::new("no-cors")
                 .long("no-cors")
                 .help("禁用CORS支持")
-                .action(clap::ArgAction::SetTrue)
+                .action(clap::ArgAction::SetTrue),
         )
         .arg(
             Arg::new("no-tracing")
                 .long("no-tracing")
                 .help("禁用请求追踪日志")
-                .action(clap::ArgAction::SetTrue)
+                .action(clap::ArgAction::SetTrue),
         )
         .arg(
             Arg::new("log-level")
@@ -53,7 +53,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .value_name("LEVEL")
                 .help("日志级别")
                 .value_parser(["trace", "debug", "info", "warn", "error"])
-                .default_value("info")
+                .default_value("info"),
         )
         .get_matches();
 
@@ -70,8 +70,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     tracing_subscriber::registry()
         .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(format!("migration_ai_manager_lib={}", level)))
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+                tracing_subscriber::EnvFilter::new(format!("migration_ai_manager_lib={}", level))
+            }),
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
@@ -90,24 +91,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("🚀 启动AI Manager API服务器");
     info!("📍 监听地址: http://{}", addr);
     info!("🔧 CORS支持: {}", if enable_cors { "启用" } else { "禁用" });
-    info!("📊 追踪日志: {}", if enable_tracing { "启用" } else { "禁用" });
+    info!(
+        "📊 追踪日志: {}",
+        if enable_tracing { "启用" } else { "禁用" }
+    );
 
     // 创建API服务器配置
-    let config = ApiServerConfig {
-        host,
-        port,
-        enable_cors,
-        enable_tracing,
-    };
+    let config = ApiServerConfig { host, port, enable_cors, enable_tracing };
 
     // 创建API服务器
     let server = ApiServer::with_config(config).await?;
 
     // 设置优雅关闭
     let shutdown_signal = async {
-        signal::ctrl_c()
-            .await
-            .expect("无法监听Ctrl+C信号");
+        signal::ctrl_c().await.expect("无法监听Ctrl+C信号");
 
         warn!("📡 收到终止信号，开始优雅关闭...");
     };

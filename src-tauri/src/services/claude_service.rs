@@ -2,14 +2,15 @@
 //
 // 提供Claude供应商的业务逻辑处理，包括验证、规则执行等
 
-use std::sync::Arc;
-use tracing::{info, warn, error, debug};
-use crate::models::{
-    ClaudeProvider, CreateClaudeProviderRequest, UpdateClaudeProviderRequest, PaginationParams, PagedResult
-};
-use crate::repositories::{ClaudeProviderRepository, BaseRepository};
-use crate::database::DatabaseManager;
 use crate::crypto::CryptoService;
+use crate::database::DatabaseManager;
+use crate::models::{
+    ClaudeProvider, CreateClaudeProviderRequest, PagedResult, PaginationParams,
+    UpdateClaudeProviderRequest,
+};
+use crate::repositories::{BaseRepository, ClaudeProviderRepository};
+use std::sync::Arc;
+use tracing::{debug, error, info, warn};
 
 /// Claude供应商业务错误
 #[derive(Debug, thiserror::Error)]
@@ -51,7 +52,10 @@ impl ClaudeProviderService {
     }
 
     /// 创建Claude供应商
-    pub async fn create_provider(&self, request: CreateClaudeProviderRequest) -> ClaudeServiceResult<i64> {
+    pub async fn create_provider(
+        &self,
+        request: CreateClaudeProviderRequest,
+    ) -> ClaudeServiceResult<i64> {
         info!(
             name = %request.name,
             url = %request.url,
@@ -100,7 +104,11 @@ impl ClaudeProviderService {
     }
 
     /// 更新Claude供应商
-    pub async fn update_provider(&self, id: i64, request: UpdateClaudeProviderRequest) -> ClaudeServiceResult<bool> {
+    pub async fn update_provider(
+        &self,
+        id: i64,
+        request: UpdateClaudeProviderRequest,
+    ) -> ClaudeServiceResult<bool> {
         info!(
             id = %id,
             "更新Claude供应商业务逻辑开始"
@@ -195,7 +203,10 @@ impl ClaudeProviderService {
     }
 
     /// 获取Claude供应商列表
-    pub async fn list_providers(&self, params: PaginationParams) -> ClaudeServiceResult<PagedResult<ClaudeProvider>> {
+    pub async fn list_providers(
+        &self,
+        params: PaginationParams,
+    ) -> ClaudeServiceResult<PagedResult<ClaudeProvider>> {
         debug!(
             page = ?params.page,
             limit = ?params.limit,
@@ -207,7 +218,11 @@ impl ClaudeProviderService {
     }
 
     /// 搜索Claude供应商
-    pub async fn search_providers(&self, search_term: &str, limit: Option<i64>) -> ClaudeServiceResult<Vec<ClaudeProvider>> {
+    pub async fn search_providers(
+        &self,
+        search_term: &str,
+        limit: Option<i64>,
+    ) -> ClaudeServiceResult<Vec<ClaudeProvider>> {
         debug!(
             search_term = %search_term,
             limit = ?limit,
@@ -357,7 +372,10 @@ impl ClaudeProviderService {
         }
 
         // 检查供应商是否存在
-        let _provider = self.repository.find_by_id::<ClaudeProvider>(id).await?
+        let _provider = self
+            .repository
+            .find_by_id::<ClaudeProvider>(id)
+            .await?
             .ok_or(ClaudeServiceError::ProviderNotFound(id))?;
 
         // 执行连接测试
@@ -438,32 +456,47 @@ impl ClaudeProviderService {
     }
 
     /// 验证创建请求
-    fn validate_create_request(&self, request: &CreateClaudeProviderRequest) -> ClaudeServiceResult<()> {
+    fn validate_create_request(
+        &self,
+        request: &CreateClaudeProviderRequest,
+    ) -> ClaudeServiceResult<()> {
         if request.name.trim().is_empty() {
-            return Err(ClaudeServiceError::Validation("供应商名称不能为空".to_string()));
+            return Err(ClaudeServiceError::Validation(
+                "供应商名称不能为空".to_string(),
+            ));
         }
 
         if request.url.trim().is_empty() {
-            return Err(ClaudeServiceError::Validation("供应商URL不能为空".to_string()));
+            return Err(ClaudeServiceError::Validation(
+                "供应商URL不能为空".to_string(),
+            ));
         }
 
         if !request.url.starts_with("http://") && !request.url.starts_with("https://") {
-            return Err(ClaudeServiceError::Validation("供应商URL必须以http://或https://开头".to_string()));
+            return Err(ClaudeServiceError::Validation(
+                "供应商URL必须以http://或https://开头".to_string(),
+            ));
         }
 
         if request.token.trim().is_empty() {
-            return Err(ClaudeServiceError::Validation("供应商Token不能为空".to_string()));
+            return Err(ClaudeServiceError::Validation(
+                "供应商Token不能为空".to_string(),
+            ));
         }
 
         if let Some(timeout) = request.timeout {
             if timeout <= 0 {
-                return Err(ClaudeServiceError::Validation("超时时间必须大于0".to_string()));
+                return Err(ClaudeServiceError::Validation(
+                    "超时时间必须大于0".to_string(),
+                ));
             }
         }
 
         if let Some(ref r#type) = request.r#type {
             if r#type != "paid" && r#type != "public_welfare" {
-                return Err(ClaudeServiceError::Validation("供应商类型必须是'paid'或'public_welfare'".to_string()));
+                return Err(ClaudeServiceError::Validation(
+                    "供应商类型必须是'paid'或'public_welfare'".to_string(),
+                ));
             }
         }
 
@@ -471,44 +504,61 @@ impl ClaudeProviderService {
     }
 
     /// 验证更新请求
-    fn validate_update_request(&self, request: &UpdateClaudeProviderRequest) -> ClaudeServiceResult<()> {
+    fn validate_update_request(
+        &self,
+        request: &UpdateClaudeProviderRequest,
+    ) -> ClaudeServiceResult<()> {
         if let Some(ref name) = request.name {
             if name.trim().is_empty() {
-                return Err(ClaudeServiceError::Validation("供应商名称不能为空".to_string()));
+                return Err(ClaudeServiceError::Validation(
+                    "供应商名称不能为空".to_string(),
+                ));
             }
         }
 
         if let Some(ref url) = request.url {
             if url.trim().is_empty() {
-                return Err(ClaudeServiceError::Validation("供应商URL不能为空".to_string()));
+                return Err(ClaudeServiceError::Validation(
+                    "供应商URL不能为空".to_string(),
+                ));
             }
 
             if !url.starts_with("http://") && !url.starts_with("https://") {
-                return Err(ClaudeServiceError::Validation("供应商URL必须以http://或https://开头".to_string()));
+                return Err(ClaudeServiceError::Validation(
+                    "供应商URL必须以http://或https://开头".to_string(),
+                ));
             }
         }
 
         if let Some(ref token) = request.token {
             if token.trim().is_empty() {
-                return Err(ClaudeServiceError::Validation("供应商Token不能为空".to_string()));
+                return Err(ClaudeServiceError::Validation(
+                    "供应商Token不能为空".to_string(),
+                ));
             }
         }
 
         if let Some(timeout) = request.timeout {
             if timeout <= 0 {
-                return Err(ClaudeServiceError::Validation("超时时间必须大于0".to_string()));
+                return Err(ClaudeServiceError::Validation(
+                    "超时时间必须大于0".to_string(),
+                ));
             }
         }
 
         if let Some(ref r#type) = request.r#type {
             if r#type != "paid" && r#type != "public_welfare" {
-                return Err(ClaudeServiceError::Validation("供应商类型必须是'paid'或'public_welfare'".to_string()));
+                return Err(ClaudeServiceError::Validation(
+                    "供应商类型必须是'paid'或'public_welfare'".to_string(),
+                ));
             }
         }
 
         if let Some(enabled) = request.enabled {
             if enabled != 0 && enabled != 1 {
-                return Err(ClaudeServiceError::Validation("启用状态必须是0或1".to_string()));
+                return Err(ClaudeServiceError::Validation(
+                    "启用状态必须是0或1".to_string(),
+                ));
             }
         }
 
@@ -589,7 +639,10 @@ mod tests {
 
         let result = service.create_provider(create_request).await;
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), ClaudeServiceError::Validation(_)));
+        assert!(matches!(
+            result.unwrap_err(),
+            ClaudeServiceError::Validation(_)
+        ));
     }
 
     #[tokio::test]

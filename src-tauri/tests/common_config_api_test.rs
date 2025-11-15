@@ -150,11 +150,17 @@ async fn test_common_config_complete_workflow() {
     assert_eq!(update_response.status(), 200);
     let update_data: Value = update_response.json().await.expect("解析更新响应失败");
     assert!(update_data["success"].as_bool().unwrap());
-    assert_eq!(update_data["data"]["value"].as_str().unwrap(), "AI Manager Pro");
+    assert_eq!(
+        update_data["data"]["value"].as_str().unwrap(),
+        "AI Manager Pro"
+    );
 
     // 9. 测试搜索功能
     let search_response = client
-        .get(&format!("{}/common-configs?search=应用程序&limit=10", base_url))
+        .get(&format!(
+            "{}/common-configs?search=应用程序&limit=10",
+            base_url
+        ))
         .send()
         .await
         .expect("搜索配置请求失败");
@@ -167,7 +173,10 @@ async fn test_common_config_complete_workflow() {
 
     // 10. 测试验证配置值
     let validate_response = client
-        .get(&format!("{}/common-configs/{}/validate", base_url, first_config_id))
+        .get(&format!(
+            "{}/common-configs/{}/validate",
+            base_url, first_config_id
+        ))
         .send()
         .await
         .expect("验证配置值请求失败");
@@ -214,7 +223,8 @@ async fn test_common_config_complete_workflow() {
         .expect("批量更新配置请求失败");
 
     assert_eq!(batch_update_response.status(), 200);
-    let batch_update_data: Value = batch_update_response.json().await.expect("解析批量更新响应失败");
+    let batch_update_data: Value =
+        batch_update_response.json().await.expect("解析批量更新响应失败");
     assert!(batch_update_data["success"].as_bool().unwrap());
     let updated_configs = batch_update_data["data"]["updated"].as_array().unwrap();
     assert_eq!(updated_configs.len(), 2);
@@ -227,7 +237,8 @@ async fn test_common_config_complete_workflow() {
         .expect("验证第二个配置更新请求失败");
 
     assert_eq!(verify_second_response.status(), 200);
-    let verify_second_data: Value = verify_second_response.json().await.expect("解析验证第二个配置响应失败");
+    let verify_second_data: Value =
+        verify_second_response.json().await.expect("解析验证第二个配置响应失败");
     assert_eq!(verify_second_data["data"]["enabled"].as_i64().unwrap(), 0);
 
     // 14. 删除配置
@@ -265,7 +276,8 @@ async fn test_common_config_complete_workflow() {
         .expect("获取最终统计信息请求失败");
 
     assert_eq!(final_stats_response.status(), 200);
-    let final_stats_data: Value = final_stats_response.json().await.expect("解析最终统计信息响应失败");
+    let final_stats_data: Value =
+        final_stats_response.json().await.expect("解析最终统计信息响应失败");
     assert_eq!(final_stats_data["data"]["total"].as_i64().unwrap(), 0);
 }
 
@@ -369,8 +381,12 @@ async fn test_common_config_data_types() {
         .await
         .expect("获取字符串类型配置请求失败");
 
-    let string_get_data: Value = string_get_response.json().await.expect("解析获取字符串类型响应失败");
-    assert_eq!(string_get_data["data"]["data_type"].as_str().unwrap(), "string");
+    let string_get_data: Value =
+        string_get_response.json().await.expect("解析获取字符串类型响应失败");
+    assert_eq!(
+        string_get_data["data"]["data_type"].as_str().unwrap(),
+        "string"
+    );
 
     let integer_get_response = client
         .get(&format!("{}/common-configs/{}", base_url, integer_id))
@@ -378,8 +394,12 @@ async fn test_common_config_data_types() {
         .await
         .expect("获取整数类型配置请求失败");
 
-    let integer_get_data: Value = integer_get_response.json().await.expect("解析获取整数类型响应失败");
-    assert_eq!(integer_get_data["data"]["data_type"].as_str().unwrap(), "integer");
+    let integer_get_data: Value =
+        integer_get_response.json().await.expect("解析获取整数类型响应失败");
+    assert_eq!(
+        integer_get_data["data"]["data_type"].as_str().unwrap(),
+        "integer"
+    );
 
     let boolean_get_response = client
         .get(&format!("{}/common-configs/{}", base_url, boolean_id))
@@ -387,8 +407,12 @@ async fn test_common_config_data_types() {
         .await
         .expect("获取布尔类型配置请求失败");
 
-    let boolean_get_data: Value = boolean_get_response.json().await.expect("解析获取布尔类型响应失败");
-    assert_eq!(boolean_get_data["data"]["data_type"].as_str().unwrap(), "boolean");
+    let boolean_get_data: Value =
+        boolean_get_response.json().await.expect("解析获取布尔类型响应失败");
+    assert_eq!(
+        boolean_get_data["data"]["data_type"].as_str().unwrap(),
+        "boolean"
+    );
 
     let json_get_response = client
         .get(&format!("{}/common-configs/{}", base_url, json_id))
@@ -449,7 +473,10 @@ async fn test_common_config_encryption() {
     assert!(get_data["success"].as_bool().unwrap());
     assert_eq!(get_data["data"]["is_encrypted"].as_i64().unwrap(), 1);
     // 加密的值不应该与原始值相同
-    assert_ne!(get_data["data"]["value"].as_str().unwrap(), "sk-1234567890abcdef");
+    assert_ne!(
+        get_data["data"]["value"].as_str().unwrap(),
+        "sk-1234567890abcdef"
+    );
 
     // 清理
     let delete_response = client

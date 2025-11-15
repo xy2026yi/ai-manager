@@ -3,15 +3,15 @@
 // 提供通用的数据库访问操作，包括CRUD、分页、搜索等功能
 // 支持加密数据的透明处理
 
-use sqlx::{SqlitePool, FromRow};
-use thiserror::Error;
-use tracing::{info, error, debug};
+use sqlx::{FromRow, SqlitePool};
 use std::marker::PhantomData;
+use thiserror::Error;
+use tracing::{debug, error, info};
 
-use crate::database::DatabaseManager;
 use crate::crypto::CryptoService;
-use crate::models::PaginationParams;
+use crate::database::DatabaseManager;
 use crate::models::PagedResult;
+use crate::models::PaginationParams;
 
 /// Repository错误类型
 #[derive(Error, Debug)]
@@ -83,7 +83,12 @@ pub trait BaseRepository {
         Self: Sized;
 
     /// 搜索记录
-    async fn search<T>(&self, search_term: &str, search_fields: &[&str], limit: Option<i64>) -> RepositoryResult<Vec<T>>
+    async fn search<T>(
+        &self,
+        search_term: &str,
+        search_fields: &[&str],
+        limit: Option<i64>,
+    ) -> RepositoryResult<Vec<T>>
     where
         T: for<'r> FromRow<'r, sqlx::sqlite::SqliteRow> + Send + Unpin,
         Self: Sized;
@@ -102,7 +107,11 @@ pub struct GenericRepository<T> {
 
 impl<T> GenericRepository<T> {
     /// 创建新的通用Repository实例
-    pub fn new(db_manager: &DatabaseManager, table_name: &str, crypto_service: &CryptoService) -> Self {
+    pub fn new(
+        db_manager: &DatabaseManager,
+        table_name: &str,
+        crypto_service: &CryptoService,
+    ) -> Self {
         Self {
             pool: db_manager.pool().clone(),
             crypto_service: crypto_service.clone(),
@@ -138,10 +147,7 @@ where
     where
         U: for<'r> FromRow<'r, sqlx::sqlite::SqliteRow> + Send + Unpin,
     {
-        let query = format!(
-            "SELECT * FROM {} WHERE id = ?",
-            self.table_name
-        );
+        let query = format!("SELECT * FROM {} WHERE id = ?", self.table_name);
 
         debug!(
             table_name = %self.table_name,
@@ -150,10 +156,7 @@ where
             query
         );
 
-        let result = sqlx::query_as::<_, U>(&query)
-            .bind(id)
-            .fetch_optional(self.pool())
-            .await?;
+        let result = sqlx::query_as::<_, U>(&query).bind(id).fetch_optional(self.pool()).await?;
 
         Ok(result)
     }
@@ -165,7 +168,7 @@ where
         // 这里需要根据具体的结构体来构建INSERT语句
         // 由于这是一个通用实现，我们暂时返回错误
         Err(RepositoryError::Validation(
-            "通用Repository需要具体实现create方法".to_string()
+            "通用Repository需要具体实现create方法".to_string(),
         ))
     }
 
@@ -174,7 +177,7 @@ where
         U: for<'r> FromRow<'r, sqlx::sqlite::SqliteRow> + Send + Unpin,
     {
         Err(RepositoryError::Validation(
-            "通用Repository需要具体实现update方法".to_string()
+            "通用Repository需要具体实现update方法".to_string(),
         ))
     }
 
@@ -188,10 +191,7 @@ where
             query
         );
 
-        let result = sqlx::query(&query)
-            .bind(id)
-            .execute(self.pool())
-            .await?;
+        let result = sqlx::query(&query).bind(id).execute(self.pool()).await?;
 
         Ok(result.rows_affected() > 0)
     }
@@ -208,9 +208,7 @@ where
             query
         );
 
-        let results = sqlx::query_as::<_, U>(&query)
-            .fetch_all(self.pool())
-            .await?;
+        let results = sqlx::query_as::<_, U>(&query).fetch_all(self.pool()).await?;
 
         Ok(results)
     }
@@ -225,9 +223,7 @@ where
 
         // 查询总数
         let count_query = format!("SELECT COUNT(*) FROM {}", self.table_name);
-        let total: i64 = sqlx::query_scalar(&count_query)
-            .fetch_one(self.pool())
-            .await?;
+        let total: i64 = sqlx::query_scalar(&count_query).fetch_one(self.pool()).await?;
 
         // 查询分页数据
         let data_query = format!(
@@ -250,13 +246,18 @@ where
             .fetch_all(self.pool())
             .await?;
 
-        let total_pages = (total + limit - 1) / limit;
+        let _total_pages = (total + limit - 1) / limit;
         let paged_result = PagedResult::new(data, total, page, limit);
 
         Ok(paged_result)
     }
 
-    async fn search<U>(&self, search_term: &str, search_fields: &[&str], limit: Option<i64>) -> RepositoryResult<Vec<U>>
+    async fn search<U>(
+        &self,
+        search_term: &str,
+        search_fields: &[&str],
+        limit: Option<i64>,
+    ) -> RepositoryResult<Vec<U>>
     where
         U: for<'r> FromRow<'r, sqlx::sqlite::SqliteRow> + Send + Unpin,
     {
@@ -276,7 +277,7 @@ where
 
         // 为每个搜索字段构建条件
         for field in search_fields {
-            for keyword in &search_keywords {
+            for _keyword in &search_keywords {
                 where_conditions.push(format!("{} LIKE ?", field));
             }
         }
@@ -307,9 +308,7 @@ where
         }
         query_builder = query_builder.bind(limit);
 
-        let results = query_builder
-            .fetch_all(self.pool())
-            .await?;
+        let results = query_builder.fetch_all(self.pool()).await?;
 
         Ok(results)
     }
@@ -323,9 +322,7 @@ where
             query
         );
 
-        let count: i64 = sqlx::query_scalar(&query)
-            .fetch_one(self.pool())
-            .await?;
+        let count: i64 = sqlx::query_scalar(&query).fetch_one(self.pool()).await?;
 
         Ok(count)
     }
@@ -336,23 +333,25 @@ pub struct EncryptedField;
 
 impl EncryptedField {
     /// 加密字符串字段
-    pub fn encrypt_field(encrypted_value: &str, crypto_service: &CryptoService) -> RepositoryResult<String> {
-        crypto_service
-            .encrypt(encrypted_value)
-            .map_err(RepositoryError::Crypto)
+    pub fn encrypt_field(
+        encrypted_value: &str,
+        crypto_service: &CryptoService,
+    ) -> RepositoryResult<String> {
+        crypto_service.encrypt(encrypted_value).map_err(RepositoryError::Crypto)
     }
 
     /// 解密字符串字段
-    pub fn decrypt_field(encrypted_value: &str, crypto_service: &CryptoService) -> RepositoryResult<String> {
-        crypto_service
-            .decrypt(encrypted_value)
-            .map_err(RepositoryError::Crypto)
+    pub fn decrypt_field(
+        encrypted_value: &str,
+        crypto_service: &CryptoService,
+    ) -> RepositoryResult<String> {
+        crypto_service.decrypt(encrypted_value).map_err(RepositoryError::Crypto)
     }
 
     /// 可选地解密字段
     pub fn optional_decrypt_field(
         encrypted_value: Option<String>,
-        crypto_service: &CryptoService
+        crypto_service: &CryptoService,
     ) -> RepositoryResult<Option<String>> {
         match encrypted_value {
             Some(value) => {
@@ -393,11 +392,7 @@ impl QueryBuilder {
 
     /// 创建IN条件
     pub fn where_in(field: &str, values: &[&str]) -> String {
-        let in_values = values
-            .iter()
-            .map(|v| format!("'{}'", v))
-            .collect::<Vec<_>>()
-            .join(", ");
+        let in_values = values.iter().map(|v| format!("'{}'", v)).collect::<Vec<_>>().join(", ");
         format!("{} IN ({})", field, in_values)
     }
 
@@ -473,16 +468,10 @@ mod tests {
         let in_condition = QueryBuilder::where_in("status", &["active", "inactive"]);
         assert_eq!(in_condition, "status IN ('active', 'inactive')");
 
-        let and_condition = QueryBuilder::and_conditions(&[
-            "name = 'test'",
-            "status = 'active'"
-        ]);
+        let and_condition = QueryBuilder::and_conditions(&["name = 'test'", "status = 'active'"]);
         assert_eq!(and_condition, "name = 'test' AND status = 'active'");
 
-        let or_condition = QueryBuilder::or_conditions(&[
-            "name = 'test'",
-            "status = 'active'"
-        ]);
+        let or_condition = QueryBuilder::or_conditions(&["name = 'test'", "status = 'active'"]);
         assert_eq!(or_condition, "name = 'test' OR status = 'active'");
     }
 }

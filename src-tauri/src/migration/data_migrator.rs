@@ -1,14 +1,12 @@
 // 数据迁移器
 // 负责从Python数据库迁移数据到Rust数据库
 
-use std::collections::HashMap;
 use crate::database::DatabaseManager;
 use crate::crypto::CryptoService;
 use crate::models::*;
 use sqlx::{SqlitePool, Row};
 use tracing::{info, warn, error, debug};
 use anyhow::{Result, Context};
-use serde_json::Value;
 
 /// 数据迁移统计信息
 #[derive(Debug, Default)]
@@ -61,39 +59,113 @@ impl DataMigrator {
             .context("迁移表结构失败")?;
         
         // 迁移各个表的数据
-        let migration_tasks = vec![
-            ("claude_providers", Self::migrate_claude_providers),
-            ("codex_providers", Self::migrate_codex_providers),
-            ("agent_guides", Self::migrate_agent_guides),
-            ("mcp_servers", Self::migrate_mcp_servers),
-            ("common_configs", Self::migrate_common_configs),
-        ];
+        info!("迁移表: claude_providers");
+        match self.migrate_claude_providers(&python_pool).await {
+            Ok(table_stats) => {
+                stats.total_records += table_stats.total_records;
+                stats.migrated_records += table_stats.migrated_records;
+                stats.failed_records += table_stats.failed_records;
+                stats.tables_processed += 1;
+                
+                if !table_stats.errors.is_empty() {
+                    stats.errors.extend(table_stats.errors);
+                }
+                
+                info!("表 claude_providers 迁移完成: {}/{} 成功", 
+                    table_stats.migrated_records, table_stats.total_records);
+            }
+            Err(e) => {
+                error!("迁移表 claude_providers 失败: {}", e);
+                stats.errors.push(format!("表 claude_providers 迁移失败: {}", e));
+            }
+        }
         
-        for (table_name, migrate_func) in migration_tasks {
-            info!("迁移表: {}", table_name);
-            match migrate_func(self, &python_pool).await {
-                Ok(table_stats) => {
-                    stats.total_records += table_stats.total_records;
-                    stats.migrated_records += table_stats.migrated_records;
-                    stats.failed_records += table_stats.failed_records;
-                    stats.tables_processed += 1;
-                    
-                    if !table_stats.errors.is_empty() {
-                        stats.errors.extend(table_stats.errors);
-                    }
-                    
-                    info!("表 {} 迁移完成: {}/{} 成功", 
-                        table_name, table_stats.migrated_records, table_stats.total_records);
+        info!("迁移表: codex_providers");
+        match self.migrate_codex_providers(&python_pool).await {
+            Ok(table_stats) => {
+                stats.total_records += table_stats.total_records;
+                stats.migrated_records += table_stats.migrated_records;
+                stats.failed_records += table_stats.failed_records;
+                stats.tables_processed += 1;
+                
+                if !table_stats.errors.is_empty() {
+                    stats.errors.extend(table_stats.errors);
                 }
-                Err(e) => {
-                    error!("迁移表 {} 失败: {}", table_name, e);
-                    stats.errors.push(format!("表 {} 迁移失败: {}", table_name, e));
+                
+                info!("表 codex_providers 迁移完成: {}/{} 成功", 
+                    table_stats.migrated_records, table_stats.total_records);
+            }
+            Err(e) => {
+                error!("迁移表 codex_providers 失败: {}", e);
+                stats.errors.push(format!("表 codex_providers 迁移失败: {}", e));
+            }
+        }
+        
+        info!("迁移表: agent_guides");
+        match self.migrate_agent_guides(&python_pool).await {
+            Ok(table_stats) => {
+                stats.total_records += table_stats.total_records;
+                stats.migrated_records += table_stats.migrated_records;
+                stats.failed_records += table_stats.failed_records;
+                stats.tables_processed += 1;
+                
+                if !table_stats.errors.is_empty() {
+                    stats.errors.extend(table_stats.errors);
                 }
+                
+                info!("表 agent_guides 迁移完成: {}/{} 成功", 
+                    table_stats.migrated_records, table_stats.total_records);
+            }
+            Err(e) => {
+                error!("迁移表 agent_guides 失败: {}", e);
+                stats.errors.push(format!("表 agent_guides 迁移失败: {}", e));
+            }
+        }
+        
+        info!("迁移表: mcp_servers");
+        match self.migrate_mcp_servers(&python_pool).await {
+            Ok(table_stats) => {
+                stats.total_records += table_stats.total_records;
+                stats.migrated_records += table_stats.migrated_records;
+                stats.failed_records += table_stats.failed_records;
+                stats.tables_processed += 1;
+                
+                if !table_stats.errors.is_empty() {
+                    stats.errors.extend(table_stats.errors);
+                }
+                
+                info!("表 mcp_servers 迁移完成: {}/{} 成功", 
+                    table_stats.migrated_records, table_stats.total_records);
+            }
+            Err(e) => {
+                error!("迁移表 mcp_servers 失败: {}", e);
+                stats.errors.push(format!("表 mcp_servers 迁移失败: {}", e));
+            }
+        }
+        
+        info!("迁移表: common_configs");
+        match self.migrate_common_configs(&python_pool).await {
+            Ok(table_stats) => {
+                stats.total_records += table_stats.total_records;
+                stats.migrated_records += table_stats.migrated_records;
+                stats.failed_records += table_stats.failed_records;
+                stats.tables_processed += 1;
+                
+                if !table_stats.errors.is_empty() {
+                    stats.errors.extend(table_stats.errors);
+                }
+                
+                info!("表 common_configs 迁移完成: {}/{} 成功", 
+                    table_stats.migrated_records, table_stats.total_records);
+            }
+            Err(e) => {
+                error!("迁移表 common_configs 失败: {}", e);
+                stats.errors.push(format!("表 common_configs 迁移失败: {}", e));
             }
         }
         
         // 关闭Python数据库连接
-        python_pool.close().await?;
+        python_pool.close().await;
         
         info!("数据迁移完成: 总计 {} 条记录，成功 {} 条，失败 {} 条",
             stats.total_records, stats.migrated_records, stats.failed_records);
@@ -122,7 +194,7 @@ impl DataMigrator {
         ];
         
         for table in tables {
-            if !self.table_exists(&self.db_manager.pool, table).await? {
+            if !self.table_exists(self.db_manager.pool(), table).await? {
                 info!("创建表: {}", table);
                 self.create_table_from_python(python_pool, table).await?;
             }
@@ -213,15 +285,14 @@ impl DataMigrator {
             _ => return Err(anyhow::anyhow!("未知的表类型: {}", table_name)),
         };
         
-        sqlx::query(create_sql).execute(&self.db_manager.pool).await?;
+        sqlx::query(create_sql).execute(self.db_manager.pool()).await?;
         Ok(())
     }
 
     /// 迁移Claude供应商数据
     async fn migrate_claude_providers(&self, python_pool: &SqlitePool) -> Result<MigrationStats> {
         let query = r#"
-            SELECT id, name, url, token, max_tokens, temperature, model, 
-                   enabled, description, timeout, retry_count, created_at, updated_at
+            SELECT id, name, url, token, timeout, created_at, updated_at
             FROM claude_providers 
             ORDER BY id
         "#;
@@ -235,13 +306,12 @@ impl DataMigrator {
                 name: row.get("name"),
                 url: row.get("url"),
                 token: row.get("token"), // 保持加密状态
-                max_tokens: row.get("max_tokens"),
-                temperature: row.get("temperature"),
-                model: row.get("model"),
-                enabled: row.get("enabled"),
-                description: row.get("description"),
-                timeout: row.get("timeout"),
-                retry_count: row.get("retry_count"),
+                timeout: row.try_get("timeout").ok(),
+                auto_update: None,
+                r#type: None,
+                opus_model: None,
+                sonnet_model: None,
+                haiku_model: None,
             };
             
             match self.create_claude_provider(&provider).await {
@@ -265,7 +335,7 @@ impl DataMigrator {
     /// 迁移Codex供应商数据
     async fn migrate_codex_providers(&self, python_pool: &SqlitePool) -> Result<MigrationStats> {
         let query = r#"
-            SELECT id, name, url, token, type, enabled, created_at, updated_at
+            SELECT id, name, url, token, type, created_at, updated_at
             FROM codex_providers 
             ORDER BY id
         "#;
@@ -279,8 +349,7 @@ impl DataMigrator {
                 name: row.get("name"),
                 url: row.get("url"),
                 token: row.get("token"), // 保持加密状态
-                r#type: row.get("type"),
-                enabled: row.get("enabled"),
+                r#type: row.try_get("type").ok(),
             };
             
             match self.create_codex_provider(&provider).await {
@@ -304,7 +373,7 @@ impl DataMigrator {
     /// 迁移Agent指导数据
     async fn migrate_agent_guides(&self, python_pool: &SqlitePool) -> Result<MigrationStats> {
         let query = r#"
-            SELECT id, name, description, created_at, updated_at
+            SELECT id, name, type, text, created_at, updated_at
             FROM agent_guides 
             ORDER BY id
         "#;
@@ -316,7 +385,8 @@ impl DataMigrator {
         for row in rows {
             let guide = CreateAgentGuideRequest {
                 name: row.get("name"),
-                description: row.get("description"),
+                r#type: row.try_get("type").unwrap_or_else(|_| "default".to_string()),
+                text: row.try_get("text").unwrap_or_default(),
             };
             
             match self.create_agent_guide(&guide).await {
@@ -340,7 +410,7 @@ impl DataMigrator {
     /// 迁移MCP服务器数据
     async fn migrate_mcp_servers(&self, python_pool: &SqlitePool) -> Result<MigrationStats> {
         let query = r#"
-            SELECT id, name, url, command, args, enabled, description, created_at, updated_at
+            SELECT id, name, type, timeout, command, args, env, created_at, updated_at
             FROM mcp_servers 
             ORDER BY id
         "#;
@@ -350,13 +420,22 @@ impl DataMigrator {
         stats.total_records = rows.len() as i64;
         
         for row in rows {
+            // 解析 args（假设存储为 JSON 字符串）
+            let args_str: String = row.try_get("args").unwrap_or_default();
+            let args: Vec<String> = serde_json::from_str(&args_str).unwrap_or_default();
+            
+            // 解析 env（假设存储为 JSON 字符串）
+            let env_str: Option<String> = row.try_get("env").ok();
+            let env: Option<std::collections::HashMap<String, String>> = env_str
+                .and_then(|s| serde_json::from_str(&s).ok());
+            
             let server = CreateMcpServerRequest {
                 name: row.get("name"),
-                url: row.get("url"),
+                r#type: row.try_get("type").ok(),
+                timeout: row.try_get("timeout").ok(),
                 command: row.get("command"),
-                args: row.get("args"),
-                enabled: row.get("enabled"),
-                description: row.get("description"),
+                args,
+                env,
             };
             
             match self.create_mcp_server(&server).await {
@@ -380,7 +459,7 @@ impl DataMigrator {
     /// 迁移通用配置数据
     async fn migrate_common_configs(&self, python_pool: &SqlitePool) -> Result<MigrationStats> {
         let query = r#"
-            SELECT id, key, value, type, description, created_at, updated_at
+            SELECT id, key, value, description, category, is_active, created_at, updated_at
             FROM common_configs 
             ORDER BY id
         "#;
@@ -393,8 +472,9 @@ impl DataMigrator {
             let config = CreateCommonConfigRequest {
                 key: row.get("key"),
                 value: row.get("value"),
-                r#type: row.get("type"),
-                description: row.get("description"),
+                description: row.try_get("description").ok(),
+                category: row.try_get("category").ok(),
+                is_active: row.try_get("is_active").ok(),
             };
             
             match self.create_common_config(&config).await {
@@ -419,21 +499,20 @@ impl DataMigrator {
     async fn create_claude_provider(&self, request: &CreateClaudeProviderRequest) -> Result<i64> {
         let id = sqlx::query(
             r#"
-            INSERT INTO claude_providers (name, url, token, max_tokens, temperature, model, enabled, description, timeout, retry_count)
+            INSERT INTO claude_providers (name, url, token, timeout, auto_update, type, opus_model, sonnet_model, haiku_model)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#
         )
         .bind(&request.name)
         .bind(&request.url)
         .bind(&request.token)
-        .bind(request.max_tokens)
-        .bind(request.temperature)
-        .bind(&request.model)
-        .bind(request.enabled)
-        .bind(&request.description)
-        .bind(request.timeout)
-        .bind(request.retry_count)
-        .execute(&self.db_manager.pool)
+        .bind(&request.timeout)
+        .bind(&request.auto_update)
+        .bind(&request.r#type)
+        .bind(&request.opus_model)
+        .bind(&request.sonnet_model)
+        .bind(&request.haiku_model)
+        .execute(self.db_manager.pool())
         .await?;
         
         let id = id.last_insert_rowid();
@@ -444,16 +523,15 @@ impl DataMigrator {
     async fn create_codex_provider(&self, request: &CreateCodexProviderRequest) -> Result<i64> {
         let id = sqlx::query(
             r#"
-            INSERT INTO codex_providers (name, url, token, type, enabled)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO codex_providers (name, url, token, type)
+            VALUES (?, ?, ?, ?)
             "#
         )
         .bind(&request.name)
         .bind(&request.url)
         .bind(&request.token)
         .bind(&request.r#type)
-        .bind(&request.enabled)
-        .execute(&self.db_manager.pool)
+        .execute(self.db_manager.pool())
         .await?;
         
         let id = id.last_insert_rowid();
@@ -464,13 +542,14 @@ impl DataMigrator {
     async fn create_agent_guide(&self, request: &CreateAgentGuideRequest) -> Result<i64> {
         let id = sqlx::query(
             r#"
-            INSERT INTO agent_guides (name, description)
-            VALUES (?, ?)
+            INSERT INTO agent_guides (name, type, text)
+            VALUES (?, ?, ?)
             "#
         )
         .bind(&request.name)
-        .bind(&request.description)
-        .execute(&self.db_manager.pool)
+        .bind(&request.r#type)
+        .bind(&request.text)
+        .execute(self.db_manager.pool())
         .await?;
         
         let id = id.last_insert_rowid();
@@ -479,19 +558,27 @@ impl DataMigrator {
 
     /// 创建MCP服务器记录
     async fn create_mcp_server(&self, request: &CreateMcpServerRequest) -> Result<i64> {
+        // 将 args 序列化为 JSON 字符串
+        let args_json = serde_json::to_string(&request.args)?;
+        
+        // 将 env 序列化为 JSON 字符串
+        let env_json = request.env.as_ref()
+            .map(|e| serde_json::to_string(e))
+            .transpose()?;
+        
         let id = sqlx::query(
             r#"
-            INSERT INTO mcp_servers (name, url, command, args, enabled, description)
+            INSERT INTO mcp_servers (name, type, timeout, command, args, env)
             VALUES (?, ?, ?, ?, ?, ?)
             "#
         )
         .bind(&request.name)
-        .bind(&request.url)
+        .bind(&request.r#type)
+        .bind(&request.timeout)
         .bind(&request.command)
-        .bind(&request.args)
-        .bind(&request.enabled)
-        .bind(&request.description)
-        .execute(&self.db_manager.pool)
+        .bind(&args_json)
+        .bind(&env_json)
+        .execute(self.db_manager.pool())
         .await?;
         
         let id = id.last_insert_rowid();
@@ -502,15 +589,16 @@ impl DataMigrator {
     async fn create_common_config(&self, request: &CreateCommonConfigRequest) -> Result<i64> {
         let id = sqlx::query(
             r#"
-            INSERT INTO common_configs (key, value, type, description)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO common_configs (key, value, description, category, is_active)
+            VALUES (?, ?, ?, ?, ?)
             "#
         )
         .bind(&request.key)
         .bind(&request.value)
-        .bind(&request.r#type)
         .bind(&request.description)
-        .execute(&self.db_manager.pool)
+        .bind(&request.category)
+        .bind(&request.is_active)
+        .execute(self.db_manager.pool())
         .await?;
         
         let id = id.last_insert_rowid();
@@ -534,7 +622,7 @@ impl DataMigrator {
         if !stats.errors.is_empty() {
             report.push_str("## 错误详情\n\n");
             for (i, error) in stats.errors.iter().enumerate() {
-                report.push_str!("{}. {}\n", i + 1, error);
+                report.push_str(&format!("{}. {}\n", i + 1, error));
             }
         }
         
@@ -593,6 +681,6 @@ mod tests {
         let migrator = DataMigrator::new(db_manager, crypto_service);
         
         // 测试创建成功
-        assert!(!migrator.db_manager.pool.is_closed());
+        assert!(!migrator.db_manager.pool().is_closed());
     }
 }

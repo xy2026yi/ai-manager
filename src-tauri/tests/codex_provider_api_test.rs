@@ -65,8 +65,14 @@ async fn test_codex_provider_complete_workflow() {
     assert_eq!(get_response.status(), 200);
     let get_data: Value = get_response.json().await.expect("解析获取响应失败");
     assert!(get_data["success"].as_bool().unwrap());
-    assert_eq!(get_data["data"]["name"].as_str().unwrap(), "集成测试Codex供应商");
-    assert_eq!(get_data["data"]["url"].as_str().unwrap(), "https://api.openai.com/v1");
+    assert_eq!(
+        get_data["data"]["name"].as_str().unwrap(),
+        "集成测试Codex供应商"
+    );
+    assert_eq!(
+        get_data["data"]["url"].as_str().unwrap(),
+        "https://api.openai.com/v1"
+    );
     assert_eq!(get_data["data"]["enabled"].as_i64().unwrap(), 1); // 默认启用
 
     // 5. 更新供应商
@@ -86,12 +92,21 @@ async fn test_codex_provider_complete_workflow() {
     assert_eq!(update_response.status(), 200);
     let update_data: Value = update_response.json().await.expect("解析更新响应失败");
     assert!(update_data["success"].as_bool().unwrap());
-    assert_eq!(update_data["data"]["name"].as_str().unwrap(), "集成测试Codex供应商-已更新");
-    assert_eq!(update_data["data"]["url"].as_str().unwrap(), "https://api.openai.com/v1/updated");
+    assert_eq!(
+        update_data["data"]["name"].as_str().unwrap(),
+        "集成测试Codex供应商-已更新"
+    );
+    assert_eq!(
+        update_data["data"]["url"].as_str().unwrap(),
+        "https://api.openai.com/v1/updated"
+    );
 
     // 6. 测试搜索功能
     let search_response = client
-        .get(&format!("{}/codex-providers?search=集成测试&limit=10", base_url))
+        .get(&format!(
+            "{}/codex-providers?search=集成测试&limit=10",
+            base_url
+        ))
         .send()
         .await
         .expect("搜索供应商请求失败");
@@ -101,11 +116,17 @@ async fn test_codex_provider_complete_workflow() {
     assert!(search_data["success"].as_bool().unwrap());
     let search_results = search_data["data"]["data"].as_array().unwrap();
     assert_eq!(search_results.len(), 1);
-    assert_eq!(search_results[0]["name"].as_str().unwrap(), "集成测试Codex供应商-已更新");
+    assert_eq!(
+        search_results[0]["name"].as_str().unwrap(),
+        "集成测试Codex供应商-已更新"
+    );
 
     // 7. 测试连接测试
     let test_response = client
-        .get(&format!("{}/codex-providers/{}/test", base_url, provider_id))
+        .get(&format!(
+            "{}/codex-providers/{}/test",
+            base_url, provider_id
+        ))
         .send()
         .await
         .expect("连接测试请求失败");
@@ -156,7 +177,8 @@ async fn test_codex_provider_complete_workflow() {
         .expect("获取最终统计信息请求失败");
 
     assert_eq!(final_stats_response.status(), 200);
-    let final_stats_data: Value = final_stats_response.json().await.expect("解析最终统计信息响应失败");
+    let final_stats_data: Value =
+        final_stats_response.json().await.expect("解析最终统计信息响应失败");
     assert_eq!(final_stats_data["data"]["total"].as_i64().unwrap(), 0);
     assert_eq!(final_stats_data["data"]["active"].as_i64().unwrap(), 0);
     assert_eq!(final_stats_data["data"]["inactive"].as_i64().unwrap(), 0);
@@ -203,7 +225,10 @@ async fn test_codex_provider_validation_errors() {
     assert_eq!(response.status(), 400);
     let data: Value = response.json().await.expect("解析URL验证错误响应失败");
     assert!(!data["success"].as_bool().unwrap());
-    assert!(data["error"]["message"].as_str().unwrap().contains("供应商URL必须以http://或https://开头"));
+    assert!(data["error"]["message"]
+        .as_str()
+        .unwrap()
+        .contains("供应商URL必须以http://或https://开头"));
 
     // 测试空token
     let empty_token_request = json!({

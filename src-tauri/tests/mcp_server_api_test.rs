@@ -95,8 +95,14 @@ async fn test_mcp_server_complete_workflow() {
     assert_eq!(get_stdio_response.status(), 200);
     let get_stdio_data: Value = get_stdio_response.json().await.expect("解析获取响应失败");
     assert!(get_stdio_data["success"].as_bool().unwrap());
-    assert_eq!(get_stdio_data["data"]["name"].as_str().unwrap(), "集成测试STDIO服务器");
-    assert_eq!(get_stdio_data["data"]["connection_type"].as_str().unwrap(), "stdio");
+    assert_eq!(
+        get_stdio_data["data"]["name"].as_str().unwrap(),
+        "集成测试STDIO服务器"
+    );
+    assert_eq!(
+        get_stdio_data["data"]["connection_type"].as_str().unwrap(),
+        "stdio"
+    );
     assert_eq!(get_stdio_data["data"]["enabled"].as_i64().unwrap(), 1);
 
     // 6. 获取特定SSE服务器
@@ -109,8 +115,14 @@ async fn test_mcp_server_complete_workflow() {
     assert_eq!(get_sse_response.status(), 200);
     let get_sse_data: Value = get_sse_response.json().await.expect("解析获取响应失败");
     assert!(get_sse_data["success"].as_bool().unwrap());
-    assert_eq!(get_sse_data["data"]["name"].as_str().unwrap(), "集成测试SSE服务器");
-    assert_eq!(get_sse_data["data"]["connection_type"].as_str().unwrap(), "sse");
+    assert_eq!(
+        get_sse_data["data"]["name"].as_str().unwrap(),
+        "集成测试SSE服务器"
+    );
+    assert_eq!(
+        get_sse_data["data"]["connection_type"].as_str().unwrap(),
+        "sse"
+    );
 
     // 7. 更新STDIO服务器
     let stdio_update_request = json!({
@@ -130,12 +142,18 @@ async fn test_mcp_server_complete_workflow() {
     assert_eq!(stdio_update_response.status(), 200);
     let stdio_update_data: Value = stdio_update_response.json().await.expect("解析更新响应失败");
     assert!(stdio_update_data["success"].as_bool().unwrap());
-    assert_eq!(stdio_update_data["data"]["name"].as_str().unwrap(), "集成测试STDIO服务器-已更新");
+    assert_eq!(
+        stdio_update_data["data"]["name"].as_str().unwrap(),
+        "集成测试STDIO服务器-已更新"
+    );
     assert_eq!(stdio_update_data["data"]["enabled"].as_i64().unwrap(), 0);
 
     // 8. 测试搜索功能
     let search_response = client
-        .get(&format!("{}/mcp-servers?search=集成测试&limit=10", base_url))
+        .get(&format!(
+            "{}/mcp-servers?search=集成测试&limit=10",
+            base_url
+        ))
         .send()
         .await
         .expect("搜索服务器请求失败");
@@ -148,7 +166,10 @@ async fn test_mcp_server_complete_workflow() {
 
     // 9. 测试配置验证
     let test_stdio_response = client
-        .get(&format!("{}/mcp-servers/{}/test", base_url, stdio_server_id))
+        .get(&format!(
+            "{}/mcp-servers/{}/test",
+            base_url, stdio_server_id
+        ))
         .send()
         .await
         .expect("测试STDIO服务器配置请求失败");
@@ -233,11 +254,15 @@ async fn test_mcp_server_complete_workflow() {
         .expect("获取最终统计信息请求失败");
 
     assert_eq!(final_stats_response.status(), 200);
-    let final_stats_data: Value = final_stats_response.json().await.expect("解析最终统计信息响应失败");
+    let final_stats_data: Value =
+        final_stats_response.json().await.expect("解析最终统计信息响应失败");
     assert_eq!(final_stats_data["data"]["total"].as_i64().unwrap(), 0);
     assert_eq!(final_stats_data["data"]["stdio_type"].as_i64().unwrap(), 0);
     assert_eq!(final_stats_data["data"]["sse_type"].as_i64().unwrap(), 0);
-    assert_eq!(final_stats_data["data"]["active_count"].as_i64().unwrap(), 0);
+    assert_eq!(
+        final_stats_data["data"]["active_count"].as_i64().unwrap(),
+        0
+    );
 }
 
 #[tokio::test]
@@ -283,7 +308,10 @@ async fn test_mcp_server_stdio_configuration() {
     assert_eq!(get_response.status(), 200);
     let get_data: Value = get_response.json().await.expect("解析获取响应失败");
     assert_eq!(get_data["data"]["command"].as_str().unwrap(), "python");
-    assert_eq!(get_data["data"]["connection_type"].as_str().unwrap(), "stdio");
+    assert_eq!(
+        get_data["data"]["connection_type"].as_str().unwrap(),
+        "stdio"
+    );
     assert!(get_data["data"]["args"].as_array().unwrap().len() == 3);
     assert!(get_data["data"]["env"].as_object().unwrap().contains_key("PYTHONPATH"));
 
@@ -337,7 +365,10 @@ async fn test_mcp_server_sse_configuration() {
 
     assert_eq!(get_response.status(), 200);
     let get_data: Value = get_response.json().await.expect("解析获取响应失败");
-    assert_eq!(get_data["data"]["url"].as_str().unwrap(), "https://api.example.com/mcp");
+    assert_eq!(
+        get_data["data"]["url"].as_str().unwrap(),
+        "https://api.example.com/mcp"
+    );
     assert_eq!(get_data["data"]["connection_type"].as_str().unwrap(), "sse");
     assert!(get_data["data"]["headers"].as_object().unwrap().contains_key("Authorization"));
 

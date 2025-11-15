@@ -67,8 +67,14 @@ async fn test_agent_guide_complete_workflow() {
     assert_eq!(get_response.status(), 200);
     let get_data: Value = get_response.json().await.expect("解析获取响应失败");
     assert!(get_data["success"].as_bool().unwrap());
-    assert_eq!(get_data["data"]["name"].as_str().unwrap(), "集成测试指导文件");
-    assert_eq!(get_data["data"]["description"].as_str().unwrap(), "这是一个用于集成测试的Agent指导文件");
+    assert_eq!(
+        get_data["data"]["name"].as_str().unwrap(),
+        "集成测试指导文件"
+    );
+    assert_eq!(
+        get_data["data"]["description"].as_str().unwrap(),
+        "这是一个用于集成测试的Agent指导文件"
+    );
     assert!(get_data["data"]["content"].as_str().unwrap().contains("集成测试指导文件"));
 
     // 5. 更新指导文件
@@ -89,12 +95,18 @@ async fn test_agent_guide_complete_workflow() {
     assert_eq!(update_response.status(), 200);
     let update_data: Value = update_response.json().await.expect("解析更新响应失败");
     assert!(update_data["success"].as_bool().unwrap());
-    assert_eq!(update_data["data"]["name"].as_str().unwrap(), "集成测试指导文件-已更新");
+    assert_eq!(
+        update_data["data"]["name"].as_str().unwrap(),
+        "集成测试指导文件-已更新"
+    );
     assert_eq!(update_data["data"]["version"].as_str().unwrap(), "1.1.0");
 
     // 6. 测试搜索功能
     let search_response = client
-        .get(&format!("{}/agent-guides?search=集成测试&limit=10", base_url))
+        .get(&format!(
+            "{}/agent-guides?search=集成测试&limit=10",
+            base_url
+        ))
         .send()
         .await
         .expect("搜索指导文件请求失败");
@@ -104,7 +116,10 @@ async fn test_agent_guide_complete_workflow() {
     assert!(search_data["success"].as_bool().unwrap());
     let search_results = search_data["data"]["data"].as_array().unwrap();
     assert_eq!(search_results.len(), 1);
-    assert_eq!(search_results[0]["name"].as_str().unwrap(), "集成测试指导文件-已更新");
+    assert_eq!(
+        search_results[0]["name"].as_str().unwrap(),
+        "集成测试指导文件-已更新"
+    );
 
     // 7. 测试验证指导文件
     let validate_response = client

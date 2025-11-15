@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use std::env;
 use std::path::Path;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct MigratedData {
@@ -21,9 +21,7 @@ struct MigratedData {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 初始化日志
-    tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::INFO)
-        .init();
+    tracing_subscriber::fmt().with_max_level(tracing::Level::INFO).init();
 
     info!("🚀 开始AI Manager数据迁移...");
 
@@ -178,61 +176,65 @@ async fn migrate_data(
 
     // 迁移Claude供应商
     if let Some(ref db) = target_db {
-        migrated_data.claude_providers = migrate_claude_providers(
-            &source_pool,
-            db,
-            &old_crypto,
-            &new_crypto,
-            dry_run
-        ).await.unwrap_or_else(|e| {
-            migrated_data.errors.push(format!("Claude供应商迁移失败: {}", e));
-            0
-        });
+        migrated_data.claude_providers =
+            migrate_claude_providers(&source_pool, db, &old_crypto, &new_crypto, dry_run)
+                .await
+                .unwrap_or_else(|e| {
+                    migrated_data.errors.push(format!("Claude供应商迁移失败: {}", e));
+                    0
+                });
 
         // 迁移Codex供应商
-        migrated_data.codex_providers = migrate_codex_providers(
-            &source_pool,
-            db,
-            &old_crypto,
-            &new_crypto,
-            dry_run
-        ).await.unwrap_or_else(|e| {
-            migrated_data.errors.push(format!("Codex供应商迁移失败: {}", e));
-            0
-        });
+        migrated_data.codex_providers =
+            migrate_codex_providers(&source_pool, db, &old_crypto, &new_crypto, dry_run)
+                .await
+                .unwrap_or_else(|e| {
+                    migrated_data.errors.push(format!("Codex供应商迁移失败: {}", e));
+                    0
+                });
 
         // 迁移Agent指导文件
-        migrated_data.agent_guides = migrate_agent_guides(&source_pool, db, dry_run)
-            .await.unwrap_or_else(|e| {
+        migrated_data.agent_guides =
+            migrate_agent_guides(&source_pool, db, dry_run).await.unwrap_or_else(|e| {
                 migrated_data.errors.push(format!("Agent指导迁移失败: {}", e));
                 0
             });
 
         // 迁移MCP服务器
-        migrated_data.mcp_servers = migrate_mcp_servers(&source_pool, db, dry_run)
-            .await.unwrap_or_else(|e| {
+        migrated_data.mcp_servers =
+            migrate_mcp_servers(&source_pool, db, dry_run).await.unwrap_or_else(|e| {
                 migrated_data.errors.push(format!("MCP服务器迁移失败: {}", e));
                 0
             });
 
         // 迁移通用配置
-        migrated_data.common_configs = migrate_common_configs(&source_pool, db, dry_run)
-            .await.unwrap_or_else(|e| {
+        migrated_data.common_configs =
+            migrate_common_configs(&source_pool, db, dry_run).await.unwrap_or_else(|e| {
                 migrated_data.errors.push(format!("通用配置迁移失败: {}", e));
                 0
             });
     } else {
         // 预览模式，只读取源数据数量
         migrated_data.claude_providers = sqlx::query("SELECT COUNT(*) FROM claude_providers")
-            .fetch_one(&source_pool).await?.get::<i64, _>(0) as usize;
+            .fetch_one(&source_pool)
+            .await?
+            .get::<i64, _>(0) as usize;
         migrated_data.codex_providers = sqlx::query("SELECT COUNT(*) FROM codex_providers")
-            .fetch_one(&source_pool).await?.get::<i64, _>(0) as usize;
+            .fetch_one(&source_pool)
+            .await?
+            .get::<i64, _>(0) as usize;
         migrated_data.agent_guides = sqlx::query("SELECT COUNT(*) FROM agent_guides")
-            .fetch_one(&source_pool).await?.get::<i64, _>(0) as usize;
+            .fetch_one(&source_pool)
+            .await?
+            .get::<i64, _>(0) as usize;
         migrated_data.mcp_servers = sqlx::query("SELECT COUNT(*) FROM mcp_servers")
-            .fetch_one(&source_pool).await?.get::<i64, _>(0) as usize;
+            .fetch_one(&source_pool)
+            .await?
+            .get::<i64, _>(0) as usize;
         migrated_data.common_configs = sqlx::query("SELECT COUNT(*) FROM common_configs")
-            .fetch_one(&source_pool).await?.get::<i64, _>(0) as usize;
+            .fetch_one(&source_pool)
+            .await?
+            .get::<i64, _>(0) as usize;
     }
 
     Ok(migrated_data)
@@ -240,20 +242,18 @@ async fn migrate_data(
 
 fn get_old_encryption_key() -> String {
     // 尝试从环境变量获取，如果没有则使用测试密钥
-    env::var("OLD_FERNET_KEY")
-        .unwrap_or_else(|_| {
-            warn!("未找到OLD_FERNET_KEY环境变量，使用默认测试密钥");
-            "dGVzdCBrZXkgZm9yIGZlcm5ldCB0ZXN0aW5nIHVuaXQgdGVzdHM=".to_string() // 测试密钥
-        })
+    env::var("OLD_FERNET_KEY").unwrap_or_else(|_| {
+        warn!("未找到OLD_FERNET_KEY环境变量，使用默认测试密钥");
+        "dGVzdCBrZXkgZm9yIGZlcm5ldCB0ZXN0aW5nIHVuaXQgdGVzdHM=".to_string() // 测试密钥
+    })
 }
 
 fn get_new_encryption_key() -> String {
     // 尝试从环境变量获取，如果没有则使用测试密钥
-    env::var("FERNET_KEY")
-        .unwrap_or_else(|_| {
-            warn!("未找到FERNET_KEY环境变量，使用默认测试密钥");
-            "Jw4Ff1BWLnSykdfXDVOuEJCG6m9dyST5B1VhU_qg0fI=".to_string() // 测试密钥
-        })
+    env::var("FERNET_KEY").unwrap_or_else(|_| {
+        warn!("未找到FERNET_KEY环境变量，使用默认测试密钥");
+        "Jw4Ff1BWLnSykdfXDVOuEJCG6m9dyST5B1VhU_qg0fI=".to_string() // 测试密钥
+    })
 }
 
 async fn migrate_claude_providers(
@@ -265,9 +265,7 @@ async fn migrate_claude_providers(
 ) -> Result<usize, Box<dyn std::error::Error>> {
     info!("🔄 迁移Claude供应商...");
 
-    let rows = sqlx::query("SELECT * FROM claude_providers")
-        .fetch_all(source_pool)
-        .await?;
+    let rows = sqlx::query("SELECT * FROM claude_providers").fetch_all(source_pool).await?;
 
     info!("找到 {} 个Claude供应商", rows.len());
 
@@ -327,9 +325,7 @@ async fn migrate_codex_providers(
 ) -> Result<usize, Box<dyn std::error::Error>> {
     info!("🔄 迁移Codex供应商...");
 
-    let rows = sqlx::query("SELECT * FROM codex_providers")
-        .fetch_all(source_pool)
-        .await?;
+    let rows = sqlx::query("SELECT * FROM codex_providers").fetch_all(source_pool).await?;
 
     info!("找到 {} 个Codex供应商", rows.len());
 
@@ -351,14 +347,22 @@ async fn migrate_codex_providers(
 
         if !dry_run {
             // 插入到目标数据库
-            sqlx::query(r#"
+            sqlx::query(
+                r#"
                 INSERT INTO codex_providers (name, url, token, type, enabled)
                 VALUES (?, ?, ?, ?, ?)
-            "#)
+            "#,
+            )
             .bind(name.clone())
-            .bind(row.get::<Option<String>, _>("url").unwrap_or_else(|| "https://api.openai.com".to_string()))
+            .bind(
+                row.get::<Option<String>, _>("url")
+                    .unwrap_or_else(|| "https://api.openai.com".to_string()),
+            )
             .bind(new_encrypted_token)
-            .bind(row.get::<Option<String>, _>("type").unwrap_or_else(|| "public_welfare".to_string()))
+            .bind(
+                row.get::<Option<String>, _>("type")
+                    .unwrap_or_else(|| "public_welfare".to_string()),
+            )
             .bind(row.get::<Option<i64>, _>("enabled").unwrap_or(0))
             .execute(target_db.pool())
             .await?;
@@ -378,9 +382,7 @@ async fn migrate_agent_guides(
 ) -> Result<usize, Box<dyn std::error::Error>> {
     info!("🔄 迁移Agent指导文件...");
 
-    let rows = sqlx::query("SELECT * FROM agent_guides")
-        .fetch_all(source_pool)
-        .await?;
+    let rows = sqlx::query("SELECT * FROM agent_guides").fetch_all(source_pool).await?;
 
     info!("找到 {} 个Agent指导文件", rows.len());
 
@@ -394,10 +396,12 @@ async fn migrate_agent_guides(
 
         if !dry_run {
             // 插入到目标数据库
-            sqlx::query(r#"
+            sqlx::query(
+                r#"
                 INSERT INTO agent_guides (name, type, text)
                 VALUES (?, ?, ?)
-            "#)
+            "#,
+            )
             .bind(name.clone())
             .bind(guide_type)
             .bind(text)
@@ -419,9 +423,7 @@ async fn migrate_mcp_servers(
 ) -> Result<usize, Box<dyn std::error::Error>> {
     info!("🔄 迁移MCP服务器...");
 
-    let rows = sqlx::query("SELECT * FROM mcp_servers")
-        .fetch_all(source_pool)
-        .await?;
+    let rows = sqlx::query("SELECT * FROM mcp_servers").fetch_all(source_pool).await?;
 
     info!("找到 {} 个MCP服务器", rows.len());
 
@@ -438,10 +440,12 @@ async fn migrate_mcp_servers(
 
         if !dry_run {
             // 插入到目标数据库
-            sqlx::query(r#"
+            sqlx::query(
+                r#"
                 INSERT INTO mcp_servers (name, type, timeout, command, args, env)
                 VALUES (?, ?, ?, ?, ?, ?)
-            "#)
+            "#,
+            )
             .bind(name.clone())
             .bind(server_type)
             .bind(timeout.unwrap_or(30000))
@@ -466,9 +470,7 @@ async fn migrate_common_configs(
 ) -> Result<usize, Box<dyn std::error::Error>> {
     info!("🔄 迁移通用配置...");
 
-    let rows = sqlx::query("SELECT * FROM common_configs")
-        .fetch_all(source_pool)
-        .await?;
+    let rows = sqlx::query("SELECT * FROM common_configs").fetch_all(source_pool).await?;
 
     info!("找到 {} 个通用配置", rows.len());
 
@@ -484,10 +486,12 @@ async fn migrate_common_configs(
 
         if !dry_run {
             // 插入到目标数据库
-            sqlx::query(r#"
+            sqlx::query(
+                r#"
                 INSERT INTO common_configs (key, value, description, category, is_active)
                 VALUES (?, ?, ?, ?, ?)
-            "#)
+            "#,
+            )
             .bind(key.clone())
             .bind(value)
             .bind(description)

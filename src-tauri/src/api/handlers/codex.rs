@@ -5,17 +5,17 @@
 use axum::{
     extract::{Path, Query, State},
     response::Json,
-    routing::{get, post, delete, put},
+    routing::{delete, get, post, put},
     Router,
 };
 use serde::Deserialize;
-use std::sync::Arc;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
 use crate::api::error::ApiError;
 use crate::api::responses::{ApiResponse, PagedResponse};
-use crate::models::{CodexProvider, CreateCodexProviderRequest, UpdateCodexProviderRequest, PaginationParams};
-use crate::services::codex_service::{CodexProviderService, CodexServiceError};
+use crate::models::{
+    CodexProvider, CreateCodexProviderRequest, PaginationParams, UpdateCodexProviderRequest,
+};
 
 // 使用服务器模块中的ApiState
 use crate::api::server::ApiState;
@@ -62,12 +62,12 @@ pub async fn create_codex_provider(
                 ApiError::Validation(msg)
             }
             crate::services::codex_service::CodexServiceError::BusinessRule(msg) => {
-                ApiError::BusinessRule(msg)
+                ApiError::BusinessRule { message: msg }
             }
             crate::services::codex_service::CodexServiceError::Repository(repo_err) => {
-                ApiError::Database(format!("数据库错误: {}", repo_err))
+                ApiError::Database { message: format!("数据库错误: {}", repo_err) }
             }
-            _ => ApiError::Internal(format!("创建Codex供应商失败: {}", e))
+            _ => ApiError::Internal { message: format!("创建Codex供应商失败: {}", e) },
         }
     })?;
 
@@ -78,7 +78,7 @@ pub async fn create_codex_provider(
             id = %id,
             "获取新创建的Codex供应商失败"
         );
-        ApiError::Database(format!("获取Codex供应商失败: {}", e))
+        ApiError::Database { message: format!("获取Codex供应商失败: {}", e) }
     })? {
         info!(
             id = %id,
@@ -88,14 +88,16 @@ pub async fn create_codex_provider(
 
         Ok(Json(ApiResponse::success_with_message(
             provider,
-            "Codex供应商创建成功".to_string()
+            "Codex供应商创建成功".to_string(),
         )))
     } else {
         error!(
             id = %id,
             "创建Codex供应商后无法找到记录"
         );
-        Err(ApiError::Internal("创建Codex供应商后无法找到记录".to_string()))
+        Err(ApiError::Internal {
+            message: "创建Codex供应商后无法找到记录".to_string(),
+        })
     }
 }
 
@@ -123,7 +125,7 @@ pub async fn get_codex_provider(
 
             Ok(Json(ApiResponse::success_with_message(
                 provider,
-                "获取Codex供应商详情成功".to_string()
+                "获取Codex供应商详情成功".to_string(),
             )))
         }
         Ok(None) => {
@@ -131,7 +133,7 @@ pub async fn get_codex_provider(
                 id = %id,
                 "Codex供应商不存在"
             );
-            Err(ApiError::NotFound("Codex供应商不存在".to_string()))
+            Err(ApiError::NotFound { resource: "Codex供应商不存在".to_string() })
         }
         Err(e) => {
             error!(
@@ -144,10 +146,10 @@ pub async fn get_codex_provider(
                     ApiError::Validation(msg)
                 }
                 crate::services::codex_service::CodexServiceError::ProviderNotFound(_) => {
-                    ApiError::NotFound("Codex供应商不存在".to_string())
+                    ApiError::NotFound { resource: "Codex供应商不存在".to_string() }
                 }
-                _ => ApiError::Database(format!("获取Codex供应商失败: {}", e))
-            })
+                _ => ApiError::Database { message: format!("获取Codex供应商失败: {}", e) },
+            });
         }
     }
 }
@@ -179,15 +181,15 @@ pub async fn update_codex_provider(
                 ApiError::Validation(msg)
             }
             crate::services::codex_service::CodexServiceError::BusinessRule(msg) => {
-                ApiError::BusinessRule(msg)
+                ApiError::BusinessRule { message: msg }
             }
             crate::services::codex_service::CodexServiceError::ProviderNotFound(_) => {
-                ApiError::NotFound("Codex供应商不存在".to_string())
+                ApiError::NotFound { resource: "Codex供应商不存在".to_string() }
             }
             crate::services::codex_service::CodexServiceError::Repository(repo_err) => {
-                ApiError::Database(format!("数据库错误: {}", repo_err))
+                ApiError::Database { message: format!("数据库错误: {}", repo_err) }
             }
-            _ => ApiError::Internal(format!("更新Codex供应商失败: {}", e))
+            _ => ApiError::Internal { message: format!("更新Codex供应商失败: {}", e) },
         }
     })?;
 
@@ -196,7 +198,7 @@ pub async fn update_codex_provider(
             id = %id,
             "更新Codex供应商未影响任何记录"
         );
-        return Err(ApiError::Internal("更新Codex供应商失败".to_string()));
+        return Err(ApiError::Internal { message: "更新Codex供应商失败".to_string() });
     }
 
     // 获取更新后的记录
@@ -206,7 +208,7 @@ pub async fn update_codex_provider(
             id = %id,
             "获取更新后的Codex供应商失败"
         );
-        ApiError::Database(format!("获取Codex供应商失败: {}", e))
+        ApiError::Database { message: format!("获取Codex供应商失败: {}", e) }
     })? {
         info!(
             id = %id,
@@ -216,14 +218,16 @@ pub async fn update_codex_provider(
 
         Ok(Json(ApiResponse::success_with_message(
             provider,
-            "Codex供应商更新成功".to_string()
+            "Codex供应商更新成功".to_string(),
         )))
     } else {
         error!(
             id = %id,
             "更新Codex供应商后无法找到记录"
         );
-        Err(ApiError::Internal("更新Codex供应商后无法找到记录".to_string()))
+        Err(ApiError::Internal {
+            message: "更新Codex供应商后无法找到记录".to_string(),
+        })
     }
 }
 
@@ -253,12 +257,12 @@ pub async fn delete_codex_provider(
                 ApiError::Validation(msg)
             }
             crate::services::codex_service::CodexServiceError::ProviderNotFound(_) => {
-                ApiError::NotFound("Codex供应商不存在".to_string())
+                ApiError::NotFound { resource: "Codex供应商不存在".to_string() }
             }
             crate::services::codex_service::CodexServiceError::Repository(repo_err) => {
-                ApiError::Database(format!("数据库错误: {}", repo_err))
+                ApiError::Database { message: format!("数据库错误: {}", repo_err) }
             }
-            _ => ApiError::Internal(format!("删除Codex供应商失败: {}", e))
+            _ => ApiError::Internal { message: format!("删除Codex供应商失败: {}", e) },
         }
     })?;
 
@@ -267,7 +271,7 @@ pub async fn delete_codex_provider(
             id = %id,
             "删除Codex供应商未影响任何记录"
         );
-        return Err(ApiError::Internal("删除Codex供应商失败".to_string()));
+        return Err(ApiError::Internal { message: "删除Codex供应商失败".to_string() });
     }
 
     info!(
@@ -277,7 +281,7 @@ pub async fn delete_codex_provider(
 
     Ok(Json(ApiResponse::success_with_message(
         (),
-        "Codex供应商删除成功".to_string()
+        "Codex供应商删除成功".to_string(),
     )))
 }
 
@@ -297,14 +301,15 @@ pub async fn list_codex_providers(
     let result = if let Some(search_term) = query.search {
         // 搜索模式
         let limit = query.limit.or(Some(50));
-        let providers = state.codex_service.search_providers(&search_term, limit).await.map_err(|e| {
-            error!(
-                error = %e,
-                search_term = %search_term,
-                "搜索Codex供应商失败"
-            );
-            ApiError::Database(format!("搜索Codex供应商失败: {}", e))
-        })?;
+        let providers =
+            state.codex_service.search_providers(&search_term, limit).await.map_err(|e| {
+                error!(
+                    error = %e,
+                    search_term = %search_term,
+                    "搜索Codex供应商失败"
+                );
+                ApiError::Database { message: format!("搜索Codex供应商失败: {}", e) }
+            })?;
 
         // 转换为分页响应格式
         let total = providers.len() as i64;
@@ -324,7 +329,7 @@ pub async fn list_codex_providers(
                 error = %e,
                 "获取活跃Codex供应商列表失败"
             );
-            ApiError::Database(format!("获取Codex供应商列表失败: {}", e))
+            ApiError::Database { message: format!("获取Codex供应商列表失败: {}", e) }
         })?;
 
         // 转换为分页响应格式
@@ -339,24 +344,21 @@ pub async fn list_codex_providers(
         paged_result
     } else {
         // 分页获取所有供应商
-        let pagination_params = PaginationParams {
-            page: query.page,
-            limit: query.limit,
-            offset: query.offset,
-        };
+        let pagination_params =
+            PaginationParams { page: query.page, limit: query.limit, offset: query.offset };
 
         state.codex_service.list_providers(pagination_params).await.map_err(|e| {
             error!(
                 error = %e,
                 "分页获取Codex供应商列表失败"
             );
-            ApiError::Database(format!("获取Codex供应商列表失败: {}", e))
+            ApiError::Database { message: format!("获取Codex供应商列表失败: {}", e) }
         })?
     };
 
     let paged_response = crate::api::responses::PagedResponse::from_paged_result_with_message(
         result,
-        "获取Codex供应商列表成功".to_string()
+        "获取Codex供应商列表成功".to_string(),
     );
 
     Ok(Json(ApiResponse::success(paged_response)))
@@ -384,10 +386,14 @@ pub async fn test_codex_provider_connection(
                 "Codex供应商连接测试完成"
             );
 
-            let message = if success { "连接测试成功" } else { "连接测试失败" };
+            let message = if success {
+                "连接测试成功"
+            } else {
+                "连接测试失败"
+            };
             Ok(Json(ApiResponse::success_with_message(
                 success,
-                message.to_string()
+                message.to_string(),
             )))
         }
         Err(e) => {
@@ -401,10 +407,10 @@ pub async fn test_codex_provider_connection(
                     ApiError::Validation(msg)
                 }
                 crate::services::codex_service::CodexServiceError::ProviderNotFound(_) => {
-                    ApiError::NotFound("Codex供应商不存在".to_string())
+                    ApiError::NotFound { resource: "Codex供应商不存在".to_string() }
                 }
-                _ => ApiError::Database(format!("连接测试失败: {}", e))
-            })
+                _ => ApiError::Database { message: format!("连接测试失败: {}", e) },
+            });
         }
     }
 }
@@ -420,16 +426,14 @@ pub async fn get_codex_provider_stats(
             error = %e,
             "获取Codex供应商统计信息失败"
         );
-        ApiError::Database(format!("获取统计信息失败: {}", e))
+        ApiError::Database { message: format!("获取统计信息失败: {}", e) }
     })?;
 
-    info!(
-        "Codex供应商统计信息获取完成"
-    );
+    info!("Codex供应商统计信息获取完成");
 
     Ok(Json(ApiResponse::success_with_message(
         stats,
-        "获取Codex供应商统计信息成功".to_string()
+        "获取Codex供应商统计信息成功".to_string(),
     )))
 }
 

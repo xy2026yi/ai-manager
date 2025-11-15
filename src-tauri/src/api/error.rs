@@ -1,6 +1,29 @@
-// API错误处理
-//
-// 定义API专用的错误类型和HTTP状态码映射
+//! API错误处理模块
+//!
+//! 这个模块定义了应用程序中所有API相关的错误类型，
+//! 提供统一的错误响应格式和用户友好的中文错误信息。
+//!
+//! # 主要功能
+//!
+//! - **错误类型定义**: 涵盖所有常见的API错误场景
+//! - **HTTP状态码映射**: 自动将错误映射到正确的HTTP状态码
+//! - **错误响应格式**: 统一的JSON错误响应格式
+//! - **类型转换**: 从各种错误类型自动转换为ApiError
+//!
+//! # 使用示例
+//!
+//! ```rust
+//! use crate::api::error::{ApiError, ApiResult};
+//!
+//! fn get_user(id: i64) -> ApiResult<User> {
+//!     if id <= 0 {
+//!         return Err(ApiError::BadRequest {
+//!             message: "用户ID必须大于0".to_string()
+//!         });
+//!     }
+//!     // ... 获取用户逻辑
+//! }
+//! ```
 
 use axum::{
     http::StatusCode,
@@ -12,94 +35,107 @@ use thiserror::Error;
 use tracing::error;
 
 /// API错误类型
+///
+/// 统一的应用程序错误处理，提供用户友好的中文错误信息
 #[derive(Error, Debug)]
 pub enum ApiError {
-    #[error("请求参数无效: {0}")]
-    BadRequest(String),
+    /// 请求参数错误 (400)
+    #[error("请求参数无效: {message}")]
+    BadRequest { message: String },
 
-    #[error("验证失败: {0}")]
-    Validation(String),
+    /// 输入验证失败 (400)
+    #[error("输入验证失败: {message}")]
+    ValidationError { message: String, field: Option<String> },
 
-    #[error("业务规则冲突: {0}")]
-    BusinessRule(String),
+    /// 业务规则冲突 (409)
+    #[error("业务规则冲突: {message}")]
+    BusinessRule { message: String },
 
-    #[error("未授权访问: {0}")]
-    Unauthorized(String),
+    /// 未授权访问 (401)
+    #[error("未授权访问: {message}")]
+    Unauthorized { message: String },
 
-    #[error("权限不足: {0}")]
-    Forbidden(String),
+    /// 权限不足 (403)
+    #[error("权限不足: {message}")]
+    Forbidden { message: String },
 
-    #[error("资源不存在: {0}")]
-    NotFound(String),
+    /// 资源不存在 (404)
+    #[error("资源不存在: {resource}")]
+    NotFound { resource: String },
 
-    #[error("资源冲突: {0}")]
-    Conflict(String),
+    /// 资源冲突 (409)
+    #[error("资源冲突: {message}")]
+    Conflict { message: String },
 
-    #[error("请求过于频繁")]
+    /// 请求过于频繁 (429)
+    #[error("请求过于频繁，请稍后重试")]
     TooManyRequests,
 
-    #[error("数据库错误: {0}")]
-    Database(String),
+    /// 数据库操作错误 (500)
+    #[error("数据库操作失败: {message}")]
+    Database { message: String },
 
-    #[error("服务器内部错误: {0}")]
-    Internal(String),
+    /// 加密处理错误 (500)
+    #[error("数据处理失败: {message}")]
+    Crypto { message: String },
 
-    #[error("服务器内部错误: {0}")]
-    InternalServerError(String),
+    /// 服务器内部错误 (500)
+    #[error("服务器内部错误: {message}")]
+    Internal { message: String },
 
-    #[error("服务暂时不可用")]
+    /// 服务暂时不可用 (503)
+    #[error("服务暂时不可用，请稍后重试")]
     ServiceUnavailable,
 
-    #[error("数据库错误: {0}")]
-    DatabaseError(String),
-
-    #[error("加密处理错误: {0}")]
-    CryptoError(String),
-
-    #[error("数据验证失败: {0}")]
-    ValidationError(String),
+    /// 配置错误 (500)
+    #[error("配置错误: {message}")]
+    Configuration { message: String },
 }
 
 impl ApiError {
+    /// 创建验证错误（简化版本）
+    pub fn Validation(message: impl Into<String>) -> Self {
+        Self::ValidationError {
+            message: message.into(),
+            field: None,
+        }
+    }
+
     /// 获取HTTP状态码
     pub fn status_code(&self) -> StatusCode {
         match self {
-            ApiError::BadRequest(_) => StatusCode::BAD_REQUEST,
-            ApiError::Validation(_) => StatusCode::BAD_REQUEST,
-            ApiError::BusinessRule(_) => StatusCode::CONFLICT,
-            ApiError::Unauthorized(_) => StatusCode::UNAUTHORIZED,
-            ApiError::Forbidden(_) => StatusCode::FORBIDDEN,
-            ApiError::NotFound(_) => StatusCode::NOT_FOUND,
-            ApiError::Conflict(_) => StatusCode::CONFLICT,
+            ApiError::BadRequest { .. } => StatusCode::BAD_REQUEST,
+            ApiError::ValidationError { .. } => StatusCode::BAD_REQUEST,
+            ApiError::BusinessRule { .. } => StatusCode::CONFLICT,
+            ApiError::Unauthorized { .. } => StatusCode::UNAUTHORIZED,
+            ApiError::Forbidden { .. } => StatusCode::FORBIDDEN,
+            ApiError::NotFound { .. } => StatusCode::NOT_FOUND,
+            ApiError::Conflict { .. } => StatusCode::CONFLICT,
             ApiError::TooManyRequests => StatusCode::TOO_MANY_REQUESTS,
-            ApiError::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            ApiError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            ApiError::InternalServerError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            ApiError::Database { .. } => StatusCode::INTERNAL_SERVER_ERROR,
+            ApiError::Crypto { .. } => StatusCode::INTERNAL_SERVER_ERROR,
+            ApiError::Internal { .. } => StatusCode::INTERNAL_SERVER_ERROR,
             ApiError::ServiceUnavailable => StatusCode::SERVICE_UNAVAILABLE,
-            ApiError::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            ApiError::CryptoError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            ApiError::ValidationError(_) => StatusCode::BAD_REQUEST,
+            ApiError::Configuration { .. } => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 
     /// 获取错误代码
     pub fn error_code(&self) -> &'static str {
         match self {
-            ApiError::BadRequest(_) => "BAD_REQUEST",
-            ApiError::Validation(_) => "VALIDATION_ERROR",
-            ApiError::BusinessRule(_) => "BUSINESS_RULE_VIOLATION",
-            ApiError::Unauthorized(_) => "UNAUTHORIZED",
-            ApiError::Forbidden(_) => "FORBIDDEN",
-            ApiError::NotFound(_) => "NOT_FOUND",
-            ApiError::Conflict(_) => "CONFLICT",
+            ApiError::BadRequest { .. } => "BAD_REQUEST",
+            ApiError::ValidationError { .. } => "VALIDATION_ERROR",
+            ApiError::BusinessRule { .. } => "BUSINESS_RULE_VIOLATION",
+            ApiError::Unauthorized { .. } => "UNAUTHORIZED",
+            ApiError::Forbidden { .. } => "FORBIDDEN",
+            ApiError::NotFound { .. } => "NOT_FOUND",
+            ApiError::Conflict { .. } => "CONFLICT",
             ApiError::TooManyRequests => "TOO_MANY_REQUESTS",
-            ApiError::Database(_) => "DATABASE_ERROR",
-            ApiError::Internal(_) => "INTERNAL_ERROR",
-            ApiError::InternalServerError(_) => "INTERNAL_SERVER_ERROR",
+            ApiError::Database { .. } => "DATABASE_ERROR",
+            ApiError::Crypto { .. } => "CRYPTO_ERROR",
+            ApiError::Internal { .. } => "INTERNAL_ERROR",
             ApiError::ServiceUnavailable => "SERVICE_UNAVAILABLE",
-            ApiError::DatabaseError(_) => "DATABASE_ERROR",
-            ApiError::CryptoError(_) => "CRYPTO_ERROR",
-            ApiError::ValidationError(_) => "VALIDATION_ERROR",
+            ApiError::Configuration { .. } => "CONFIGURATION_ERROR",
         }
     }
 }
@@ -135,8 +171,16 @@ impl ApiError {
     /// 获取错误详情
     fn get_details(&self) -> Option<serde_json::Value> {
         match self {
-            ApiError::ValidationError(details) => Some(json!({
-                "validation_errors": details
+            ApiError::ValidationError { field, .. } => field.as_ref().map(|f| {
+                json!({
+                    "field": f
+                })
+            }),
+            ApiError::Database { .. } => Some(json!({
+                "type": "database_operation"
+            })),
+            ApiError::Crypto { .. } => Some(json!({
+                "type": "encryption_operation"
             })),
             _ => None,
         }
@@ -151,15 +195,21 @@ impl From<sqlx::Error> for ApiError {
     fn from(err: sqlx::Error) -> Self {
         error!("数据库错误: {}", err);
         match err {
-            sqlx::Error::RowNotFound => ApiError::NotFound("记录不存在".to_string()),
+            sqlx::Error::RowNotFound => {
+                ApiError::NotFound { resource: "记录不存在".to_string() }
+            }
             sqlx::Error::Database(db_err) => {
                 if db_err.is_unique_violation() {
-                    ApiError::Conflict("数据已存在".to_string())
+                    ApiError::Conflict {
+                        message: "数据已存在，违反唯一性约束".to_string()
+                    }
                 } else {
-                    ApiError::DatabaseError(db_err.message().to_string())
+                    ApiError::Database {
+                        message: format!("数据库操作失败: {}", db_err.message())
+                    }
                 }
             }
-            _ => ApiError::DatabaseError(err.to_string()),
+            _ => ApiError::Database { message: format!("数据库连接或查询错误: {}", err) },
         }
     }
 }
@@ -168,7 +218,7 @@ impl From<sqlx::Error> for ApiError {
 impl From<crate::crypto::CryptoError> for ApiError {
     fn from(err: crate::crypto::CryptoError) -> Self {
         error!("加密错误: {}", err);
-        ApiError::CryptoError(err.to_string())
+        ApiError::Crypto { message: format!("数据处理失败: {}", err) }
     }
 }
 
@@ -176,6 +226,25 @@ impl From<crate::crypto::CryptoError> for ApiError {
 impl From<validator::ValidationErrors> for ApiError {
     fn from(err: validator::ValidationErrors) -> Self {
         error!("验证错误: {:?}", err);
-        ApiError::ValidationError(format!("输入验证失败: {:?}", err))
+        ApiError::ValidationError {
+            message: "输入数据验证失败".to_string(),
+            field: Some(format!("{:?}", err)),
+        }
+    }
+}
+
+/// 从IO错误转换
+impl From<std::io::Error> for ApiError {
+    fn from(err: std::io::Error) -> Self {
+        error!("IO错误: {}", err);
+        ApiError::Internal { message: format!("文件操作失败: {}", err) }
+    }
+}
+
+/// 从序列化错误转换
+impl From<serde_json::Error> for ApiError {
+    fn from(err: serde_json::Error) -> Self {
+        error!("JSON序列化错误: {}", err);
+        ApiError::BadRequest { message: format!("数据格式错误: {}", err) }
     }
 }

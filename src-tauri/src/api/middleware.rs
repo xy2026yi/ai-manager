@@ -2,16 +2,16 @@
 //
 // 提供CORS、日志记录、认证等中间件功能
 
+use crate::api::error::ApiError;
 use axum::{
     extract::Request,
-    http::{StatusCode, header},
+    http::{header, StatusCode},
     middleware::Next,
-    response::{Response, IntoResponse},
+    response::Response,
 };
 use std::time::Instant;
-use tracing::{info, warn, error};
+use tracing::{info, warn};
 use uuid::Uuid;
-use crate::api::error::ApiError;
 
 /// 请求上下文信息
 #[derive(Debug, Clone)]
@@ -103,11 +103,9 @@ pub async fn request_tracking_middleware(
 }
 
 /// 添加请求ID到响应头的中间件
-pub async fn add_request_id_header(
-    request: Request,
-    next: Next,
-) -> Response {
-    let request_id = request.extensions()
+pub async fn add_request_id_header(request: Request, next: Next) -> Response {
+    let request_id = request
+        .extensions()
         .get::<RequestContext>()
         .map(|ctx| ctx.request_id.clone())
         .unwrap_or_else(|| Uuid::new_v4().to_string());
@@ -122,10 +120,7 @@ pub async fn add_request_id_header(
 }
 
 /// 认证中间件
-pub async fn auth_middleware(
-    request: Request,
-    next: Next,
-) -> Result<Response, ApiError> {
+pub async fn auth_middleware(request: Request, next: Next) -> Result<Response, ApiError> {
     // 获取认证头
     let auth_header = request.headers().get(header::AUTHORIZATION);
 
@@ -165,10 +160,7 @@ pub async fn auth_middleware(
 }
 
 /// 简单的API Key认证中间件（可选实现）
-pub async fn api_key_middleware(
-    request: Request,
-    next: Next,
-) -> Result<Response, ApiError> {
+pub async fn api_key_middleware(request: Request, next: Next) -> Result<Response, ApiError> {
     const API_KEY: &str = "ai-manager-api-key-2024";
 
     let api_key_header = request.headers().get("x-api-key");
@@ -189,20 +181,17 @@ pub async fn api_key_middleware(
                 api_key = ?key,
                 "API Key验证失败"
             );
-            Err(ApiError::Unauthorized("API Key无效".to_string()))
+            Err(ApiError::Unauthorized { message: "API Key无效".to_string() })
         }
         None => {
             warn!(request_id = %request_id, "缺少API Key");
-            Err(ApiError::Unauthorized("缺少API Key".to_string()))
+            Err(ApiError::Unauthorized { message: "缺少API Key".to_string() })
         }
     }
 }
 
 /// 全局错误处理中间件
-pub async fn global_error_handler(
-    request: Request,
-    next: Next,
-) -> Response {
+pub async fn global_error_handler(request: Request, next: Next) -> Response {
     let request_context = request.extensions().get::<RequestContext>().cloned();
     let request_id = request_context
         .as_ref()

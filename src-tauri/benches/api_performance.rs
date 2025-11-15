@@ -1,16 +1,22 @@
 // API性能基准测试
 // 测试所有API端点的响应时间和并发处理能力
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use migration_ai_manager_lib::{api, services::*, database::DatabaseManager, crypto::CryptoService};
-use tokio::runtime::Runtime;
-use std::sync::Arc;
-use serde_json::json;
 use claude_service::ClaudeProviderService;
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use migration_ai_manager_lib::{
+    api, crypto::CryptoService, database::DatabaseManager, services::*,
+};
+use serde_json::json;
+use std::sync::Arc;
+use tokio::runtime::Runtime;
 // use chrono::Utc;
 
 // 创建测试服务
-async fn create_test_services() -> (Arc<DatabaseManager>, Arc<CryptoService>, ClaudeProviderService) {
+async fn create_test_services() -> (
+    Arc<DatabaseManager>,
+    Arc<CryptoService>,
+    ClaudeProviderService,
+) {
     let db_config = migration_ai_manager_lib::database::DatabaseConfig {
         url: "sqlite::memory:".to_string(),
         max_connections: 10,
@@ -20,10 +26,13 @@ async fn create_test_services() -> (Arc<DatabaseManager>, Arc<CryptoService>, Cl
         max_lifetime: std::time::Duration::from_secs(300),
     };
 
-    let db_manager = Arc::new(DatabaseManager::new(db_config).await.expect("Failed to create database"));
-    let crypto_service = Arc::new(CryptoService::new("test_key_for_benchmarks").expect("Failed to create crypto service"));
+    let db_manager =
+        Arc::new(DatabaseManager::new(db_config).await.expect("Failed to create database"));
+    let crypto_service = Arc::new(
+        CryptoService::new("test_key_for_benchmarks").expect("Failed to create crypto service"),
+    );
     let claude_service = ClaudeProviderService::new(db_manager.clone(), crypto_service.clone());
-    
+
     (db_manager, crypto_service, claude_service)
 }
 
@@ -31,7 +40,7 @@ async fn create_test_services() -> (Arc<DatabaseManager>, Arc<CryptoService>, Cl
 fn bench_claude_provider_creation(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
     let (_db, _crypto, service) = rt.block_on(create_test_services());
-    
+
     c.bench_function("claude_provider_creation", |b| {
         b.to_async(&rt).iter(|| async {
             let request = migration_ai_manager_lib::models::CreateClaudeProviderRequest {
@@ -51,7 +60,7 @@ fn bench_claude_provider_creation(c: &mut Criterion) {
                 sonnet_model: todo!(),
                 haiku_model: todo!(),
             };
-            
+
             let result = service.create_provider(black_box(request)).await;
             black_box(result)
         });
@@ -62,7 +71,7 @@ fn bench_claude_provider_creation(c: &mut Criterion) {
 fn bench_claude_provider_query(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
     let (_db, _crypto, service) = rt.block_on(create_test_services());
-    
+
     // 先创建一个供应商用于查询
     rt.block_on(async {
         let request = migration_ai_manager_lib::models::CreateClaudeProviderRequest {
@@ -84,7 +93,7 @@ fn bench_claude_provider_query(c: &mut Criterion) {
         };
         service.create_provider(request).await.unwrap();
     });
-    
+
     c.bench_function("claude_provider_query", |b| {
         b.to_async(&rt).iter(|| async {
             let params = migration_ai_manager_lib::models::PaginationParams {
@@ -92,7 +101,7 @@ fn bench_claude_provider_query(c: &mut Criterion) {
                 limit: Some(10),
                 offset: todo!(),
             };
-            
+
             let result = service.list_providers(black_box(params)).await;
             black_box(result)
         });
@@ -103,7 +112,7 @@ fn bench_claude_provider_query(c: &mut Criterion) {
 fn bench_database_connection_pool(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
     let (db_manager, _crypto, _service) = rt.block_on(create_test_services());
-    
+
     c.bench_function("database_connection_pool", |b| {
         b.to_async(&rt).iter(|| async {
             // 模拟频繁的数据库连接获取和释放
@@ -115,16 +124,17 @@ fn bench_database_connection_pool(c: &mut Criterion) {
 
 // 基准测试：加密解密性能
 fn bench_crypto_operations(c: &mut Criterion) {
-    let crypto_service = CryptoService::new("benchmark_key").expect("Failed to create crypto service");
+    let crypto_service =
+        CryptoService::new("benchmark_key").expect("Failed to create crypto service");
     let test_data = "这是一段需要进行性能测试的敏感数据内容，包含中文字符和特殊符号！@#$%^&*()";
-    
+
     c.bench_function("encryption", |b| {
         b.iter(|| {
             let encrypted = crypto_service.encrypt(black_box(test_data));
             black_box(encrypted)
         });
     });
-    
+
     c.bench_function("decryption", |b| {
         let encrypted = crypto_service.encrypt(test_data).unwrap();
         b.iter(|| {
@@ -156,18 +166,18 @@ fn bench_json_serialization(c: &mut Criterion) {
         created_at: Some(chrono::Utc::now().to_rfc3339()),
         updated_at: Some(chrono::Utc::now().to_rfc3339()),
     };
-    
+
     c.bench_function("json_serialization", |b| {
         b.iter(|| {
             let serialized = serde_json::to_string(black_box(&claude_provider));
             black_box(serialized)
         });
     });
-    
+
     let json_string = serde_json::to_string(&claude_provider).unwrap();
     c.bench_function("json_deserialization", |b| {
         b.iter(|| {
-            let deserialized: Result<migration_ai_manager_lib::models::ClaudeProvider, _> = 
+            let deserialized: Result<migration_ai_manager_lib::models::ClaudeProvider, _> =
                 serde_json::from_str(black_box(&json_string));
             black_box(deserialized)
         });
@@ -178,11 +188,11 @@ fn bench_json_serialization(c: &mut Criterion) {
 fn bench_concurrent_requests(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
     let (_db, _crypto, service) = rt.block_on(create_test_services());
-    
+
     c.bench_function("concurrent_claude_creation", |b| {
         b.to_async(&rt).iter(|| async {
             let mut handles = vec![];
-            
+
             // 创建10个并发任务
             for i in 0..10 {
                 let service_clone = service.clone();
@@ -204,12 +214,12 @@ fn bench_concurrent_requests(c: &mut Criterion) {
                         sonnet_model: todo!(),
                         haiku_model: todo!(),
                     };
-                    
+
                     service_clone.create_provider(request).await
                 });
                 handles.push(handle);
             }
-            
+
             // 等待所有任务完成
             let results = futures::future::join_all(handles).await;
             black_box(results)

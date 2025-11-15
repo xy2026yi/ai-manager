@@ -2,8 +2,8 @@
 //
 // 提供测试数据库连接和配置参数
 
-use std::path::{Path, PathBuf};
 use sqlx::SqlitePool;
+use std::path::{Path, PathBuf};
 
 /// 测试配置
 pub struct TestConfig {
@@ -118,7 +118,7 @@ impl DatabasePreparer {
 
         // 确保测试数据目录存在
         self.config.ensure_test_data_dir()?;
-        
+
         // 清理临时数据库
         let _ = self.config.cleanup_temp_db();
 
@@ -155,7 +155,7 @@ mod tests {
     #[test]
     fn test_config_creation() {
         let config = TestConfig::new();
-        
+
         // 验证路径格式正确
         assert!(config.original_db_url().starts_with("sqlite:"));
         assert!(config.migrated_db_url().starts_with("sqlite:"));
@@ -165,10 +165,10 @@ mod tests {
     #[tokio::test]
     async fn test_database_pool_creation() {
         let config = TestConfig::new();
-        
+
         // 测试临时数据库连接池创建
         let _temp_pool = config.create_temp_db_pool().await;
-        
+
         // 注意：这个测试可能会失败，因为测试数据库文件可能不存在
         // 在实际使用中，我们应该先准备测试环境
     }
@@ -177,8 +177,11 @@ mod tests {
     fn test_database_preparer() {
         let config = TestConfig::new();
         let preparer = DatabasePreparer::new(config);
-        
+
         // 基本功能测试
-        assert_eq!(preparer.config.original_db_path, TestConfig::new().original_db_path);
+        assert_eq!(
+            preparer.config.original_db_path,
+            TestConfig::new().original_db_path
+        );
     }
 }

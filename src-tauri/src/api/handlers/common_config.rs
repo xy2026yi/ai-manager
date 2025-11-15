@@ -8,14 +8,14 @@ use axum::{
     Router,
 };
 use serde::Deserialize;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
 use crate::api::error::ApiError;
 use crate::api::responses::{ApiResponse, PagedResponse};
-use crate::models::{CommonConfig, CreateCommonConfigRequest, UpdateCommonConfigRequest, PaginationParams};
-use crate::repositories::{CommonConfigRepository, BaseRepository};
-use crate::database::DatabaseManager;
-use crate::crypto::CryptoService;
+use crate::models::{
+    CommonConfig, CreateCommonConfigRequest, PaginationParams, UpdateCommonConfigRequest,
+};
+use crate::repositories::{BaseRepository, CommonConfigRepository};
 
 /// 重用API服务器的ApiState
 pub use super::super::server::ApiState;
@@ -74,7 +74,7 @@ pub async fn create_common_config(
             key = %request.key,
             "检查配置键是否存在失败"
         );
-        ApiError::Database(format!("检查配置键失败: {}", e))
+        ApiError::Database { message: format!("检查配置键失败: {}", e) }
     })? {
         warn!(
             key = %request.key,
@@ -90,7 +90,7 @@ pub async fn create_common_config(
             key = %request.key,
             "创建通用配置失败"
         );
-        ApiError::Database(format!("创建通用配置失败: {}", e))
+        ApiError::Database { message: format!("创建通用配置失败: {}", e) }
     })?;
 
     // 获取创建的记录
@@ -100,7 +100,7 @@ pub async fn create_common_config(
             id = %id,
             "获取新创建的通用配置失败"
         );
-        ApiError::Database(format!("获取通用配置失败: {}", e))
+        ApiError::Database { message: format!("获取通用配置失败: {}", e) }
     })? {
         info!(
             id = %id,
@@ -110,14 +110,14 @@ pub async fn create_common_config(
 
         Ok(Json(ApiResponse::success_with_message(
             config,
-            "通用配置创建成功".to_string()
+            "通用配置创建成功".to_string(),
         )))
     } else {
         error!(
             id = %id,
             "创建通用配置后无法找到记录"
         );
-        Err(ApiError::Internal("创建通用配置后无法找到记录".to_string()))
+        Err(ApiError::Internal { message: "创建通用配置后无法找到记录".to_string() })
     }
 }
 
@@ -147,7 +147,7 @@ pub async fn get_common_config(
 
             Ok(Json(ApiResponse::success_with_message(
                 config,
-                "获取通用配置详情成功".to_string()
+                "获取通用配置详情成功".to_string(),
             )))
         }
         Ok(None) => {
@@ -155,7 +155,7 @@ pub async fn get_common_config(
                 id = %id,
                 "通用配置不存在"
             );
-            Err(ApiError::NotFound("通用配置不存在".to_string()))
+            Err(ApiError::NotFound { resource: "通用配置不存在".to_string() })
         }
         Err(e) => {
             error!(
@@ -163,7 +163,7 @@ pub async fn get_common_config(
                 id = %id,
                 "获取通用配置详情失败"
             );
-            Err(ApiError::Database(format!("获取通用配置失败: {}", e)))
+            Err(ApiError::Database { message: format!("获取通用配置失败: {}", e) })
         }
     }
 }
@@ -193,7 +193,7 @@ pub async fn get_common_config_by_key(
 
             Ok(Json(ApiResponse::success_with_message(
                 config,
-                "根据key获取通用配置成功".to_string()
+                "根据key获取通用配置成功".to_string(),
             )))
         }
         Ok(None) => {
@@ -201,7 +201,7 @@ pub async fn get_common_config_by_key(
                 key = %key,
                 "通用配置不存在"
             );
-            Err(ApiError::NotFound("通用配置不存在".to_string()))
+            Err(ApiError::NotFound { resource: "通用配置不存在".to_string() })
         }
         Err(e) => {
             error!(
@@ -209,7 +209,7 @@ pub async fn get_common_config_by_key(
                 key = %key,
                 "根据key获取通用配置失败"
             );
-            Err(ApiError::Database(format!("获取通用配置失败: {}", e)))
+            Err(ApiError::Database { message: format!("获取通用配置失败: {}", e) })
         }
     }
 }
@@ -238,7 +238,7 @@ pub async fn update_common_config(
             id = %id,
             "检查通用配置是否存在失败"
         );
-        ApiError::Database(format!("检查通用配置失败: {}", e))
+        ApiError::Database { message: format!("检查通用配置失败: {}", e) }
     })?;
 
     if existing.is_none() {
@@ -246,7 +246,7 @@ pub async fn update_common_config(
             id = %id,
             "尝试更新不存在的通用配置"
         );
-        return Err(ApiError::NotFound("通用配置不存在".to_string()));
+        return Err(ApiError::NotFound { resource: "通用配置不存在".to_string() });
     }
 
     // 验证更新数据
@@ -264,7 +264,7 @@ pub async fn update_common_config(
                         key = %key,
                         "检查新配置键是否存在失败"
                     );
-                    ApiError::Database(format!("检查配置键失败: {}", e))
+                    ApiError::Database { message: format!("检查配置键失败: {}", e) }
                 })? {
                     warn!(
                         key = %key,
@@ -289,7 +289,7 @@ pub async fn update_common_config(
             id = %id,
             "更新通用配置失败"
         );
-        ApiError::Database(format!("更新通用配置失败: {}", e))
+        ApiError::Database { message: format!("更新通用配置失败: {}", e) }
     })?;
 
     if !updated {
@@ -297,7 +297,7 @@ pub async fn update_common_config(
             id = %id,
             "更新通用配置未影响任何记录"
         );
-        return Err(ApiError::Internal("更新通用配置失败".to_string()));
+        return Err(ApiError::Internal { message: "更新通用配置失败".to_string() });
     }
 
     // 获取更新后的记录
@@ -307,7 +307,7 @@ pub async fn update_common_config(
             id = %id,
             "获取更新后的通用配置失败"
         );
-        ApiError::Database(format!("获取通用配置失败: {}", e))
+        ApiError::Database { message: format!("获取通用配置失败: {}", e) }
     })? {
         info!(
             id = %id,
@@ -317,14 +317,14 @@ pub async fn update_common_config(
 
         Ok(Json(ApiResponse::success_with_message(
             config,
-            "通用配置更新成功".to_string()
+            "通用配置更新成功".to_string(),
         )))
     } else {
         error!(
             id = %id,
             "更新通用配置后无法找到记录"
         );
-        Err(ApiError::Internal("更新通用配置后无法找到记录".to_string()))
+        Err(ApiError::Internal { message: "更新通用配置后无法找到记录".to_string() })
     }
 }
 
@@ -351,7 +351,7 @@ pub async fn delete_common_config(
             id = %id,
             "检查通用配置是否存在失败"
         );
-        ApiError::Database(format!("检查通用配置失败: {}", e))
+        ApiError::Database { message: format!("检查通用配置失败: {}", e) }
     })?;
 
     if existing.is_none() {
@@ -359,7 +359,7 @@ pub async fn delete_common_config(
             id = %id,
             "尝试删除不存在的通用配置"
         );
-        return Err(ApiError::NotFound("通用配置不存在".to_string()));
+        return Err(ApiError::NotFound { resource: "通用配置不存在".to_string() });
     }
 
     // 删除记录
@@ -369,7 +369,7 @@ pub async fn delete_common_config(
             id = %id,
             "删除通用配置失败"
         );
-        ApiError::Database(format!("删除通用配置失败: {}", e))
+        ApiError::Database { message: format!("删除通用配置失败: {}", e) }
     })?;
 
     if !deleted {
@@ -377,7 +377,7 @@ pub async fn delete_common_config(
             id = %id,
             "删除通用配置未影响任何记录"
         );
-        return Err(ApiError::Internal("删除通用配置失败".to_string()));
+        return Err(ApiError::Internal { message: "删除通用配置失败".to_string() });
     }
 
     info!(
@@ -387,7 +387,7 @@ pub async fn delete_common_config(
 
     Ok(Json(ApiResponse::success_with_message(
         (),
-        "通用配置删除成功".to_string()
+        "通用配置删除成功".to_string(),
     )))
 }
 
@@ -416,7 +416,7 @@ pub async fn list_common_configs(
                 search_term = %search_term,
                 "搜索通用配置失败"
             );
-            ApiError::Database(format!("搜索通用配置失败: {}", e))
+            ApiError::Database { message: format!("搜索通用配置失败: {}", e) }
         })?;
 
         // 转换为分页响应格式
@@ -438,7 +438,7 @@ pub async fn list_common_configs(
                 category = %category,
                 "根据类别获取通用配置列表失败"
             );
-            ApiError::Database(format!("获取通用配置列表失败: {}", e))
+            ApiError::Database { message: format!("获取通用配置列表失败: {}", e) }
         })?;
 
         // 转换为分页响应格式
@@ -459,7 +459,7 @@ pub async fn list_common_configs(
                 error = %e,
                 "获取活跃通用配置列表失败"
             );
-            ApiError::Database(format!("获取通用配置列表失败: {}", e))
+            ApiError::Database { message: format!("获取通用配置列表失败: {}", e) }
         })?;
 
         // 转换为分页响应格式
@@ -474,24 +474,21 @@ pub async fn list_common_configs(
         paged_result
     } else {
         // 分页获取所有配置
-        let pagination_params = PaginationParams {
-            page: query.page,
-            limit: query.limit,
-            offset: query.offset,
-        };
+        let pagination_params =
+            PaginationParams { page: query.page, limit: query.limit, offset: query.offset };
 
         repository.paginate::<CommonConfig>(&pagination_params).await.map_err(|e| {
             error!(
                 error = %e,
                 "分页获取通用配置列表失败"
             );
-            ApiError::Database(format!("获取通用配置列表失败: {}", e))
+            ApiError::Database { message: format!("获取通用配置列表失败: {}", e) }
         })?
     };
 
     let paged_response = crate::api::responses::PagedResponse::from_paged_result_with_message(
         result,
-        "获取通用配置列表成功".to_string()
+        "获取通用配置列表成功".to_string(),
     );
 
     Ok(Json(ApiResponse::success(paged_response)))
@@ -514,7 +511,9 @@ pub async fn batch_update_common_configs(
     }
 
     if request.configs.len() > 100 {
-        return Err(ApiError::Validation("单次批量更新配置数量不能超过100个".to_string()));
+        return Err(ApiError::Validation(
+            "单次批量更新配置数量不能超过100个".to_string(),
+        ));
     }
 
     // 验证配置项
@@ -528,10 +527,8 @@ pub async fn batch_update_common_configs(
     }
 
     // 转换为元组格式
-    let configs: Vec<(String, String)> = request.configs
-        .into_iter()
-        .map(|item| (item.key, item.value))
-        .collect();
+    let configs: Vec<(String, String)> =
+        request.configs.into_iter().map(|item| (item.key, item.value)).collect();
 
     // 批量更新
     let updated_count = repository.batch_update_configs(&configs).await.map_err(|e| {
@@ -539,7 +536,7 @@ pub async fn batch_update_common_configs(
             error = %e,
             "批量更新通用配置失败"
         );
-        ApiError::Database(format!("批量更新通用配置失败: {}", e))
+        ApiError::Database { message: format!("批量更新通用配置失败: {}", e) }
     })?;
 
     info!(
@@ -550,7 +547,7 @@ pub async fn batch_update_common_configs(
 
     Ok(Json(ApiResponse::success_with_message(
         updated_count,
-        format!("成功更新{}个配置", updated_count)
+        format!("成功更新{}个配置", updated_count),
     )))
 }
 
@@ -578,10 +575,14 @@ pub async fn validate_common_config(
                 "通用配置值验证完成"
             );
 
-            let message = if is_valid { "配置值验证通过" } else { "配置值验证失败" };
+            let message = if is_valid {
+                "配置值验证通过"
+            } else {
+                "配置值验证失败"
+            };
             Ok(Json(ApiResponse::success_with_message(
                 is_valid,
-                message.to_string()
+                message.to_string(),
             )))
         }
         Err(e) => {
@@ -590,7 +591,7 @@ pub async fn validate_common_config(
                 id = %id,
                 "通用配置值验证失败"
             );
-            Err(ApiError::Database(format!("配置值验证失败: {}", e)))
+            Err(ApiError::Database { message: format!("配置值验证失败: {}", e) })
         }
     }
 }
@@ -609,7 +610,7 @@ pub async fn get_common_config_stats(
             error = %e,
             "获取通用配置总数失败"
         );
-        ApiError::Database(format!("获取统计信息失败: {}", e))
+        ApiError::Database { message: format!("获取统计信息失败: {}", e) }
     })?;
 
     // 获取活跃数量
@@ -618,7 +619,7 @@ pub async fn get_common_config_stats(
             error = %e,
             "获取活跃通用配置数量失败"
         );
-        ApiError::Database(format!("获取统计信息失败: {}", e))
+        ApiError::Database { message: format!("获取统计信息失败: {}", e) }
     })?;
 
     // 获取非活跃数量
@@ -630,7 +631,7 @@ pub async fn get_common_config_stats(
             error = %e,
             "获取配置类别失败"
         );
-        ApiError::Database(format!("获取统计信息失败: {}", e))
+        ApiError::Database { message: format!("获取统计信息失败: {}", e) }
     })?;
 
     let stats = serde_json::json!({
@@ -652,13 +653,13 @@ pub async fn get_common_config_stats(
 
     Ok(Json(ApiResponse::success_with_message(
         stats,
-        "获取通用配置统计信息成功".to_string()
+        "获取通用配置统计信息成功".to_string(),
     )))
 }
 
 /// 通用配置API路由
 pub fn routes() -> Router<ApiState> {
-    use axum::routing::{get, post, delete, put};
+    use axum::routing::{delete, get, post, put};
 
     Router::new()
         // 创建通用配置

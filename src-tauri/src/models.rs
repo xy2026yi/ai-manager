@@ -11,8 +11,8 @@ pub struct ClaudeProvider {
     pub token: String, // 加密存储
     pub timeout: Option<i64>,
     pub auto_update: Option<i64>, // 1-禁用遥测，0-启用遥测
-    pub r#type: String, // paid 或 public_welfare
-    pub enabled: i64, // 0-未启用，1-启用
+    pub r#type: String,           // paid 或 public_welfare
+    pub enabled: i64,             // 0-未启用，1-启用
     pub opus_model: Option<String>,
     pub sonnet_model: Option<String>,
     pub haiku_model: Option<String>,
@@ -55,9 +55,9 @@ pub struct CodexProvider {
     pub id: i64,
     pub name: String,
     pub url: String,
-    pub token: String, // 加密存储
+    pub token: String,  // 加密存储
     pub r#type: String, // paid 或 public_welfare
-    pub enabled: i64, // 0-未启用，1-启用
+    pub enabled: i64,   // 0-未启用，1-启用
     pub created_at: Option<String>,
     pub updated_at: Option<String>,
 }
@@ -87,7 +87,7 @@ pub struct AgentGuide {
     pub id: i64,
     pub name: String,
     pub r#type: String, // 'only' 或 'and'
-    pub text: String, // 文件完整内容
+    pub text: String,   // 文件完整内容
     pub created_at: Option<String>,
     pub updated_at: Option<String>,
 }
@@ -114,10 +114,10 @@ pub struct McpServer {
     pub id: i64,
     pub name: String,
     pub r#type: Option<String>, // stdio, sse等
-    pub timeout: Option<i64>, // 默认30000ms
-    pub command: String, // 命令，如npx, uvx, python等
-    pub args: String, // 命令参数，存储为JSON字符串
-    pub env: Option<String>, // 环境变量，存储为JSON字符串
+    pub timeout: Option<i64>,   // 默认30000ms
+    pub command: String,        // 命令，如npx, uvx, python等
+    pub args: String,           // 命令参数，存储为JSON字符串
+    pub env: Option<String>,    // 环境变量，存储为JSON字符串
     pub created_at: Option<String>,
     pub updated_at: Option<String>,
 }
@@ -152,7 +152,7 @@ pub struct CommonConfig {
     pub value: String, // 支持环境变量替换，如 ${HOME}
     pub description: Option<String>,
     pub category: String, // 配置分类
-    pub is_active: i64, // 是否启用：1-启用，0-禁用
+    pub is_active: i64,   // 是否启用：1-启用，0-禁用
     pub created_at: Option<String>,
     pub updated_at: Option<String>,
 }
@@ -187,38 +187,78 @@ pub trait DbRecord {
 
 // 为每个模型实现DbRecord trait
 impl DbRecord for ClaudeProvider {
-    fn table_name() -> &'static str { "claude_providers" }
-    fn id(&self) -> i64 { self.id }
-    fn created_at(&self) -> Option<&str> { self.created_at.as_deref() }
-    fn updated_at(&self) -> Option<&str> { self.updated_at.as_deref() }
+    fn table_name() -> &'static str {
+        "claude_providers"
+    }
+    fn id(&self) -> i64 {
+        self.id
+    }
+    fn created_at(&self) -> Option<&str> {
+        self.created_at.as_deref()
+    }
+    fn updated_at(&self) -> Option<&str> {
+        self.updated_at.as_deref()
+    }
 }
 
 impl DbRecord for CodexProvider {
-    fn table_name() -> &'static str { "codex_providers" }
-    fn id(&self) -> i64 { self.id }
-    fn created_at(&self) -> Option<&str> { self.created_at.as_deref() }
-    fn updated_at(&self) -> Option<&str> { self.updated_at.as_deref() }
+    fn table_name() -> &'static str {
+        "codex_providers"
+    }
+    fn id(&self) -> i64 {
+        self.id
+    }
+    fn created_at(&self) -> Option<&str> {
+        self.created_at.as_deref()
+    }
+    fn updated_at(&self) -> Option<&str> {
+        self.updated_at.as_deref()
+    }
 }
 
 impl DbRecord for AgentGuide {
-    fn table_name() -> &'static str { "agent_guides" }
-    fn id(&self) -> i64 { self.id }
-    fn created_at(&self) -> Option<&str> { self.created_at.as_deref() }
-    fn updated_at(&self) -> Option<&str> { self.updated_at.as_deref() }
+    fn table_name() -> &'static str {
+        "agent_guides"
+    }
+    fn id(&self) -> i64 {
+        self.id
+    }
+    fn created_at(&self) -> Option<&str> {
+        self.created_at.as_deref()
+    }
+    fn updated_at(&self) -> Option<&str> {
+        self.updated_at.as_deref()
+    }
 }
 
 impl DbRecord for McpServer {
-    fn table_name() -> &'static str { "mcp_servers" }
-    fn id(&self) -> i64 { self.id }
-    fn created_at(&self) -> Option<&str> { self.created_at.as_deref() }
-    fn updated_at(&self) -> Option<&str> { self.updated_at.as_deref() }
+    fn table_name() -> &'static str {
+        "mcp_servers"
+    }
+    fn id(&self) -> i64 {
+        self.id
+    }
+    fn created_at(&self) -> Option<&str> {
+        self.created_at.as_deref()
+    }
+    fn updated_at(&self) -> Option<&str> {
+        self.updated_at.as_deref()
+    }
 }
 
 impl DbRecord for CommonConfig {
-    fn table_name() -> &'static str { "common_configs" }
-    fn id(&self) -> i64 { self.id }
-    fn created_at(&self) -> Option<&str> { self.created_at.as_deref() }
-    fn updated_at(&self) -> Option<&str> { self.updated_at.as_deref() }
+    fn table_name() -> &'static str {
+        "common_configs"
+    }
+    fn id(&self) -> i64 {
+        self.id
+    }
+    fn created_at(&self) -> Option<&str> {
+        self.created_at.as_deref()
+    }
+    fn updated_at(&self) -> Option<&str> {
+        self.updated_at.as_deref()
+    }
 }
 
 // 分页查询参数
@@ -231,11 +271,7 @@ pub struct PaginationParams {
 
 impl Default for PaginationParams {
     fn default() -> Self {
-        Self {
-            page: Some(1),
-            limit: Some(20),
-            offset: Some(0),
-        }
+        Self { page: Some(1), limit: Some(20), offset: Some(0) }
     }
 }
 
@@ -252,12 +288,6 @@ pub struct PagedResult<T> {
 impl<T> PagedResult<T> {
     pub fn new(data: Vec<T>, total: i64, page: i64, limit: i64) -> Self {
         let total_pages = (total + limit - 1) / limit;
-        Self {
-            data,
-            total,
-            page,
-            limit,
-            total_pages,
-        }
+        Self { data, total, page, limit, total_pages }
     }
 }

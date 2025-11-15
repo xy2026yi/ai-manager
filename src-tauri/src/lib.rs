@@ -1,17 +1,21 @@
 // AI Manager Library - 核心功能模块
+pub mod api;
 pub mod crypto;
+pub mod database;
+pub mod logging;
 pub mod models;
 pub mod python_compatibility_test;
-pub mod database;
-pub mod simple_migration;
-pub mod api;
 pub mod repositories;
 pub mod services;
+pub mod simple_migration;
+pub mod utils;
+pub mod migration_tool;
+pub mod migration;
 
 // 重新导出主要功能
-pub use crypto::{CryptoService, CryptoError};
+pub use api::{ApiError, ApiResponse, ApiResult, ApiServer, PagedResponse, RequestContext};
+pub use crypto::{CryptoError, CryptoService};
+pub use database::{DatabaseConfig, DatabaseError, DatabaseManager, PoolStatus, QueryBuilder};
 pub use models::*;
-pub use database::{DatabaseManager, DatabaseConfig, DatabaseError, QueryBuilder, PoolStatus};
-pub use simple_migration::{SimpleMigrationTool, SimpleMigrationError, SimpleExportData};
-pub use api::{ApiServer, ApiError, ApiResult, ApiResponse, PagedResponse, RequestContext};
 pub use repositories::{BaseRepository, RepositoryResult};
+pub use simple_migration::{SimpleExportData, SimpleMigrationError, SimpleMigrationTool};

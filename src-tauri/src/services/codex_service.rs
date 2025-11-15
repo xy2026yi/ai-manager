@@ -2,14 +2,15 @@
 //
 // 提供Codex供应商的业务逻辑处理，包括验证、规则执行等
 
-use std::sync::Arc;
-use tracing::{info, warn, error, debug};
-use crate::models::{
-    CodexProvider, CreateCodexProviderRequest, UpdateCodexProviderRequest, PaginationParams, PagedResult
-};
-use crate::repositories::{CodexProviderRepository, BaseRepository};
-use crate::database::DatabaseManager;
 use crate::crypto::CryptoService;
+use crate::database::DatabaseManager;
+use crate::models::{
+    CodexProvider, CreateCodexProviderRequest, PagedResult, PaginationParams,
+    UpdateCodexProviderRequest,
+};
+use crate::repositories::{BaseRepository, CodexProviderRepository};
+use std::sync::Arc;
+use tracing::{debug, error, info, warn};
 
 /// Codex供应商业务错误
 #[derive(Debug, thiserror::Error)]
@@ -51,7 +52,10 @@ impl CodexProviderService {
     }
 
     /// 创建Codex供应商
-    pub async fn create_provider(&self, request: &CreateCodexProviderRequest) -> CodexServiceResult<i64> {
+    pub async fn create_provider(
+        &self,
+        request: &CreateCodexProviderRequest,
+    ) -> CodexServiceResult<i64> {
         info!(
             name = %request.name,
             url = %request.url,
@@ -100,7 +104,11 @@ impl CodexProviderService {
     }
 
     /// 更新Codex供应商
-    pub async fn update_provider(&self, id: i64, request: UpdateCodexProviderRequest) -> CodexServiceResult<bool> {
+    pub async fn update_provider(
+        &self,
+        id: i64,
+        request: UpdateCodexProviderRequest,
+    ) -> CodexServiceResult<bool> {
         info!(
             id = %id,
             "更新Codex供应商业务逻辑开始"
@@ -195,7 +203,10 @@ impl CodexProviderService {
     }
 
     /// 获取Codex供应商列表
-    pub async fn list_providers(&self, params: PaginationParams) -> CodexServiceResult<PagedResult<CodexProvider>> {
+    pub async fn list_providers(
+        &self,
+        params: PaginationParams,
+    ) -> CodexServiceResult<PagedResult<CodexProvider>> {
         debug!(
             page = ?params.page,
             limit = ?params.limit,
@@ -207,7 +218,11 @@ impl CodexProviderService {
     }
 
     /// 搜索Codex供应商
-    pub async fn search_providers(&self, search_term: &str, limit: Option<i64>) -> CodexServiceResult<Vec<CodexProvider>> {
+    pub async fn search_providers(
+        &self,
+        search_term: &str,
+        limit: Option<i64>,
+    ) -> CodexServiceResult<Vec<CodexProvider>> {
         debug!(
             search_term = %search_term,
             limit = ?limit,
@@ -347,7 +362,10 @@ impl CodexProviderService {
         }
 
         // 检查供应商是否存在
-        let _provider = self.repository.find_by_id::<CodexProvider>(id).await?
+        let _provider = self
+            .repository
+            .find_by_id::<CodexProvider>(id)
+            .await?
             .ok_or(CodexServiceError::ProviderNotFound(id))?;
 
         // 执行连接测试
@@ -423,55 +441,77 @@ impl CodexProviderService {
     }
 
     /// 验证创建请求
-    fn validate_create_request(&self, request: &CreateCodexProviderRequest) -> CodexServiceResult<()> {
+    fn validate_create_request(
+        &self,
+        request: &CreateCodexProviderRequest,
+    ) -> CodexServiceResult<()> {
         if request.name.trim().is_empty() {
-            return Err(CodexServiceError::Validation("供应商名称不能为空".to_string()));
+            return Err(CodexServiceError::Validation(
+                "供应商名称不能为空".to_string(),
+            ));
         }
 
         if request.url.trim().is_empty() {
-            return Err(CodexServiceError::Validation("供应商URL不能为空".to_string()));
+            return Err(CodexServiceError::Validation(
+                "供应商URL不能为空".to_string(),
+            ));
         }
 
         if !request.url.starts_with("http://") && !request.url.starts_with("https://") {
-            return Err(CodexServiceError::Validation("供应商URL必须以http://或https://开头".to_string()));
+            return Err(CodexServiceError::Validation(
+                "供应商URL必须以http://或https://开头".to_string(),
+            ));
         }
 
         if request.token.trim().is_empty() {
-            return Err(CodexServiceError::Validation("供应商Token不能为空".to_string()));
+            return Err(CodexServiceError::Validation(
+                "供应商Token不能为空".to_string(),
+            ));
         }
 
-    
         Ok(())
     }
 
     /// 验证更新请求
-    fn validate_update_request(&self, request: &UpdateCodexProviderRequest) -> CodexServiceResult<()> {
+    fn validate_update_request(
+        &self,
+        request: &UpdateCodexProviderRequest,
+    ) -> CodexServiceResult<()> {
         if let Some(ref name) = request.name {
             if name.trim().is_empty() {
-                return Err(CodexServiceError::Validation("供应商名称不能为空".to_string()));
+                return Err(CodexServiceError::Validation(
+                    "供应商名称不能为空".to_string(),
+                ));
             }
         }
 
         if let Some(ref url) = request.url {
             if url.trim().is_empty() {
-                return Err(CodexServiceError::Validation("供应商URL不能为空".to_string()));
+                return Err(CodexServiceError::Validation(
+                    "供应商URL不能为空".to_string(),
+                ));
             }
 
             if !url.starts_with("http://") && !url.starts_with("https://") {
-                return Err(CodexServiceError::Validation("供应商URL必须以http://或https://开头".to_string()));
+                return Err(CodexServiceError::Validation(
+                    "供应商URL必须以http://或https://开头".to_string(),
+                ));
             }
         }
 
         if let Some(ref token) = request.token {
             if token.trim().is_empty() {
-                return Err(CodexServiceError::Validation("供应商Token不能为空".to_string()));
+                return Err(CodexServiceError::Validation(
+                    "供应商Token不能为空".to_string(),
+                ));
             }
         }
 
-    
         if let Some(enabled) = request.enabled {
             if enabled != 0 && enabled != 1 {
-                return Err(CodexServiceError::Validation("启用状态必须是0或1".to_string()));
+                return Err(CodexServiceError::Validation(
+                    "启用状态必须是0或1".to_string(),
+                ));
             }
         }
 
@@ -542,7 +582,10 @@ mod tests {
 
         let result = service.create_provider(&create_request).await;
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), CodexServiceError::Validation(_)));
+        assert!(matches!(
+            result.unwrap_err(),
+            CodexServiceError::Validation(_)
+        ));
     }
 
     #[tokio::test]

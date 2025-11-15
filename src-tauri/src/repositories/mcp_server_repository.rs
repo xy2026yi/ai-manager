@@ -2,12 +2,12 @@
 //
 // 提供MCP服务器的特定数据访问操作
 
-use sqlx::{FromRow, SqlitePool};
-use crate::repositories::base_repository::{BaseRepository, RepositoryResult, RepositoryError};
 use crate::crypto::CryptoService;
 use crate::database::DatabaseManager;
-use crate::models::{McpServer, CreateMcpServerRequest, UpdateMcpServerRequest};
+use crate::models::{CreateMcpServerRequest, McpServer, UpdateMcpServerRequest};
+use crate::repositories::base_repository::{BaseRepository, RepositoryError, RepositoryResult};
 use serde_json;
+use sqlx::{FromRow, SqlitePool};
 
 /// MCP服务器Repository
 pub struct McpServerRepository {
@@ -25,7 +25,10 @@ impl McpServerRepository {
     }
 
     /// 创建MCP服务器记录
-    pub async fn create_mcp_server(&self, request: &CreateMcpServerRequest) -> RepositoryResult<i64> {
+    pub async fn create_mcp_server(
+        &self,
+        request: &CreateMcpServerRequest,
+    ) -> RepositoryResult<i64> {
         // 将args和env序列化为JSON字符串
         let args_json = serde_json::to_string(&request.args)?;
         let env_json = request.env.as_ref().map(|env| serde_json::to_string(env)).transpose()?;
@@ -57,11 +60,18 @@ impl McpServerRepository {
     }
 
     /// 更新MCP服务器记录
-    pub async fn update_mcp_server(&self, id: i64, request: &UpdateMcpServerRequest) -> RepositoryResult<bool> {
+    pub async fn update_mcp_server(
+        &self,
+        id: i64,
+        request: &UpdateMcpServerRequest,
+    ) -> RepositoryResult<bool> {
         // 获取现有记录
         let existing = self.find_by_id::<McpServer>(id).await?;
         if existing.is_none() {
-            return Err(RepositoryError::NotFound(format!("MCP服务器 ID {} 不存在", id)));
+            return Err(RepositoryError::NotFound(format!(
+                "MCP服务器 ID {} 不存在",
+                id
+            )));
         }
 
         // 序列化更新的数据
@@ -124,7 +134,11 @@ impl McpServerRepository {
     }
 
     /// 搜索MCP服务器
-    pub async fn search_mcp_servers(&self, search_term: &str, limit: Option<i64>) -> RepositoryResult<Vec<McpServer>> {
+    pub async fn search_mcp_servers(
+        &self,
+        search_term: &str,
+        limit: Option<i64>,
+    ) -> RepositoryResult<Vec<McpServer>> {
         let search_fields = vec!["name", "type", "command"];
         self.search::<McpServer>(search_term, &search_fields, limit).await
     }
@@ -150,7 +164,10 @@ impl McpServerRepository {
     pub async fn test_server_config(&self, id: i64) -> RepositoryResult<bool> {
         let server = self.find_by_id_parsed(id).await?;
         if server.is_none() {
-            return Err(RepositoryError::NotFound(format!("MCP服务器 ID {} 不存在", id)));
+            return Err(RepositoryError::NotFound(format!(
+                "MCP服务器 ID {} 不存在",
+                id
+            )));
         }
 
         let server = server.unwrap();
@@ -161,8 +178,7 @@ impl McpServerRepository {
         );
 
         // 基本配置验证
-        let is_valid = !server.command.trim().is_empty() 
-            && server.timeout.unwrap_or(30000) > 0;
+        let is_valid = !server.command.trim().is_empty() && server.timeout.unwrap_or(30000) > 0;
 
         // 可以在这里添加更复杂的验证逻辑，比如：
         // - 检查命令是否存在
@@ -176,10 +192,7 @@ impl McpServerRepository {
     pub async fn count_by_type(&self, server_type: &str) -> RepositoryResult<i64> {
         let query = "SELECT COUNT(*) FROM mcp_servers WHERE type = ?";
 
-        let count: i64 = sqlx::query_scalar(query)
-            .bind(server_type)
-            .fetch_one(&self.pool)
-            .await?;
+        let count: i64 = sqlx::query_scalar(query).bind(server_type).fetch_one(&self.pool).await?;
 
         Ok(count)
     }
@@ -190,9 +203,7 @@ impl McpServerRepository {
 
         tracing::debug!("获取活跃的MCP服务器列表");
 
-        let results = sqlx::query_as::<_, McpServer>(query)
-            .fetch_all(&self.pool)
-            .await?;
+        let results = sqlx::query_as::<_, McpServer>(query).fetch_all(&self.pool).await?;
 
         Ok(results)
     }
@@ -215,10 +226,7 @@ impl BaseRepository for McpServerRepository {
     where
         T: for<'r> FromRow<'r, sqlx::sqlite::SqliteRow> + Send + Unpin,
     {
-        let query = format!(
-            "SELECT * FROM {} WHERE id = ?",
-            Self::table_name()
-        );
+        let query = format!("SELECT * FROM {} WHERE id = ?", Self::table_name());
 
         tracing::debug!(
             table_name = %Self::table_name(),
@@ -227,10 +235,7 @@ impl BaseRepository for McpServerRepository {
             query
         );
 
-        let result = sqlx::query_as::<_, T>(&query)
-            .bind(id)
-            .fetch_optional(self.pool())
-            .await?;
+        let result = sqlx::query_as::<_, T>(&query).bind(id).fetch_optional(self.pool()).await?;
 
         Ok(result)
     }
@@ -241,7 +246,7 @@ impl BaseRepository for McpServerRepository {
     {
         // 对于MCP服务器，使用专用的创建方法
         Err(RepositoryError::Validation(
-            "请使用 create_mcp_server 方法".to_string()
+            "请使用 create_mcp_server 方法".to_string(),
         ))
     }
 
@@ -251,7 +256,7 @@ impl BaseRepository for McpServerRepository {
     {
         // 对于MCP服务器，使用专用的更新方法
         Err(RepositoryError::Validation(
-            "请使用 update_mcp_server 方法".to_string()
+            "请使用 update_mcp_server 方法".to_string(),
         ))
     }
 
@@ -263,10 +268,7 @@ impl BaseRepository for McpServerRepository {
             "删除MCP服务器"
         );
 
-        let result = sqlx::query(query)
-            .bind(id)
-            .execute(self.pool())
-            .await?;
+        let result = sqlx::query(query).bind(id).execute(self.pool()).await?;
 
         Ok(result.rows_affected() > 0)
     }
@@ -279,14 +281,15 @@ impl BaseRepository for McpServerRepository {
 
         tracing::debug!("获取MCP服务器列表");
 
-        let results = sqlx::query_as::<_, T>(query)
-            .fetch_all(self.pool())
-            .await?;
+        let results = sqlx::query_as::<_, T>(query).fetch_all(self.pool()).await?;
 
         Ok(results)
     }
 
-    async fn paginate<T>(&self, params: &crate::models::PaginationParams) -> RepositoryResult<crate::models::PagedResult<T>>
+    async fn paginate<T>(
+        &self,
+        params: &crate::models::PaginationParams,
+    ) -> RepositoryResult<crate::models::PagedResult<T>>
     where
         T: for<'r> FromRow<'r, sqlx::sqlite::SqliteRow> + Send + Unpin,
     {
@@ -296,9 +299,7 @@ impl BaseRepository for McpServerRepository {
 
         // 查询总数
         let count_query = "SELECT COUNT(*) FROM mcp_servers";
-        let total: i64 = sqlx::query_scalar(count_query)
-            .fetch_one(self.pool())
-            .await?;
+        let total: i64 = sqlx::query_scalar(count_query).fetch_one(self.pool()).await?;
 
         // 查询分页数据
         let data_query = "SELECT * FROM mcp_servers ORDER BY id DESC LIMIT ? OFFSET ?";
@@ -321,7 +322,12 @@ impl BaseRepository for McpServerRepository {
         Ok(paged_result)
     }
 
-    async fn search<T>(&self, search_term: &str, search_fields: &[&str], limit: Option<i64>) -> RepositoryResult<Vec<T>>
+    async fn search<T>(
+        &self,
+        search_term: &str,
+        search_fields: &[&str],
+        limit: Option<i64>,
+    ) -> RepositoryResult<Vec<T>>
     where
         T: for<'r> FromRow<'r, sqlx::sqlite::SqliteRow> + Send + Unpin,
     {
@@ -369,9 +375,7 @@ impl BaseRepository for McpServerRepository {
         }
         query_builder = query_builder.bind(limit);
 
-        let results = query_builder
-            .fetch_all(self.pool())
-            .await?;
+        let results = query_builder.fetch_all(self.pool()).await?;
 
         Ok(results)
     }
@@ -381,9 +385,7 @@ impl BaseRepository for McpServerRepository {
 
         tracing::debug!("统计MCP服务器总数");
 
-        let count: i64 = sqlx::query_scalar(query)
-            .fetch_one(self.pool())
-            .await?;
+        let count: i64 = sqlx::query_scalar(query).fetch_one(self.pool()).await?;
 
         Ok(count)
     }
@@ -393,8 +395,8 @@ impl BaseRepository for McpServerRepository {
 mod tests {
     use super::*;
     use crate::database::DatabaseConfig;
-    use tempfile::tempdir;
     use std::collections::HashMap;
+    use tempfile::tempdir;
 
     async fn create_test_repository() -> McpServerRepository {
         let temp_dir = tempdir().unwrap();

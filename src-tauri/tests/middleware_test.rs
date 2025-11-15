@@ -3,26 +3,30 @@
 // 测试请求追踪、认证中间件和错误处理功能
 
 use axum::{
-    Router,
-    http::{StatusCode, Request, Method},
     body::Body,
+    http::{Method, Request, StatusCode},
+    middleware,
     response::{IntoResponse, Json},
     routing::{get, post},
-    middleware,
+    Router,
 };
 use migration_ai_manager_lib::{
-    api::{request_tracking_middleware, add_request_id_header, global_error_handler},
     api::error::ApiError,
+    api::middleware::{add_request_id_header, global_error_handler, request_tracking_middleware},
 };
 use tower::ServiceExt;
 
 fn create_test_app() -> Router {
     Router::new()
         .route("/", get(|| async { "Hello World" }))
-        .route("/error", get(|| async {
-            // Json(ApiError::BadRequest("测试错误".to_string()))
-            ApiError::BadRequest("测试错误".to_string()).into_response()
-        }))
+        .route(
+            "/error",
+            get(|| async {
+                ApiError::BadRequest { 
+                    message: "测试错误".to_string() 
+                }.into_response()
+            }),
+        )
         .layer(middleware::from_fn(global_error_handler))
         .layer(middleware::from_fn(add_request_id_header))
         .layer(middleware::from_fn(request_tracking_middleware))

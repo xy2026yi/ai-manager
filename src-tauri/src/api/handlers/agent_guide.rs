@@ -8,14 +8,14 @@ use axum::{
     Router,
 };
 use serde::Deserialize;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
 use crate::api::error::ApiError;
 use crate::api::responses::{ApiResponse, PagedResponse};
-use crate::models::{AgentGuide, CreateAgentGuideRequest, UpdateAgentGuideRequest, PaginationParams};
+use crate::models::{
+    AgentGuide, CreateAgentGuideRequest, PaginationParams, UpdateAgentGuideRequest,
+};
 use crate::repositories::{AgentGuideRepository, BaseRepository};
-use crate::database::DatabaseManager;
-use crate::crypto::CryptoService;
 
 /// 重用API服务器的ApiState
 pub use super::super::server::ApiState;
@@ -54,7 +54,9 @@ pub async fn create_agent_guide(
     }
 
     if !["only", "and"].contains(&request.r#type.as_str()) {
-        return Err(ApiError::Validation("指导文件类型必须是 'only' 或 'and'".to_string()));
+        return Err(ApiError::Validation(
+            "指导文件类型必须是 'only' 或 'and'".to_string(),
+        ));
     }
 
     // 创建记录
@@ -64,7 +66,7 @@ pub async fn create_agent_guide(
             name = %request.name,
             "创建Agent指导文件失败"
         );
-        ApiError::Database(format!("创建Agent指导文件失败: {}", e))
+        ApiError::Database { message: format!("创建Agent指导文件失败: {}", e) }
     })?;
 
     // 获取创建的记录
@@ -74,7 +76,7 @@ pub async fn create_agent_guide(
             id = %id,
             "获取新创建的Agent指导文件失败"
         );
-        ApiError::Database(format!("获取Agent指导文件失败: {}", e))
+        ApiError::Database { message: format!("获取Agent指导文件失败: {}", e) }
     })? {
         info!(
             id = %id,
@@ -84,14 +86,16 @@ pub async fn create_agent_guide(
 
         Ok(Json(ApiResponse::success_with_message(
             guide,
-            "Agent指导文件创建成功".to_string()
+            "Agent指导文件创建成功".to_string(),
         )))
     } else {
         error!(
             id = %id,
             "创建Agent指导文件后无法找到记录"
         );
-        Err(ApiError::Internal("创建Agent指导文件后无法找到记录".to_string()))
+        Err(ApiError::Internal {
+            message: "创建Agent指导文件后无法找到记录".to_string(),
+        })
     }
 }
 
@@ -121,7 +125,7 @@ pub async fn get_agent_guide(
 
             Ok(Json(ApiResponse::success_with_message(
                 guide,
-                "获取Agent指导文件详情成功".to_string()
+                "获取Agent指导文件详情成功".to_string(),
             )))
         }
         Ok(None) => {
@@ -129,7 +133,7 @@ pub async fn get_agent_guide(
                 id = %id,
                 "Agent指导文件不存在"
             );
-            Err(ApiError::NotFound("Agent指导文件不存在".to_string()))
+            Err(ApiError::NotFound { resource: "Agent指导文件不存在".to_string() })
         }
         Err(e) => {
             error!(
@@ -137,7 +141,7 @@ pub async fn get_agent_guide(
                 id = %id,
                 "获取Agent指导文件详情失败"
             );
-            Err(ApiError::Database(format!("获取Agent指导文件失败: {}", e)))
+            Err(ApiError::Database { message: format!("获取Agent指导文件失败: {}", e) })
         }
     }
 }
@@ -166,7 +170,7 @@ pub async fn update_agent_guide(
             id = %id,
             "检查Agent指导文件是否存在失败"
         );
-        ApiError::Database(format!("检查Agent指导文件失败: {}", e))
+        ApiError::Database { message: format!("检查Agent指导文件失败: {}", e) }
     })?;
 
     if existing.is_none() {
@@ -174,7 +178,7 @@ pub async fn update_agent_guide(
             id = %id,
             "尝试更新不存在的Agent指导文件"
         );
-        return Err(ApiError::NotFound("Agent指导文件不存在".to_string()));
+        return Err(ApiError::NotFound { resource: "Agent指导文件不存在".to_string() });
     }
 
     // 验证更新数据
@@ -192,7 +196,9 @@ pub async fn update_agent_guide(
 
     if let Some(ref guide_type) = request.r#type {
         if !["only", "and"].contains(&guide_type.as_str()) {
-            return Err(ApiError::Validation("指导文件类型必须是 'only' 或 'and'".to_string()));
+            return Err(ApiError::Validation(
+                "指导文件类型必须是 'only' 或 'and'".to_string(),
+            ));
         }
     }
 
@@ -203,7 +209,7 @@ pub async fn update_agent_guide(
             id = %id,
             "更新Agent指导文件失败"
         );
-        ApiError::Database(format!("更新Agent指导文件失败: {}", e))
+        ApiError::Database { message: format!("更新Agent指导文件失败: {}", e) }
     })?;
 
     if !updated {
@@ -211,7 +217,7 @@ pub async fn update_agent_guide(
             id = %id,
             "更新Agent指导文件未影响任何记录"
         );
-        return Err(ApiError::Internal("更新Agent指导文件失败".to_string()));
+        return Err(ApiError::Internal { message: "更新Agent指导文件失败".to_string() });
     }
 
     // 获取更新后的记录
@@ -221,7 +227,7 @@ pub async fn update_agent_guide(
             id = %id,
             "获取更新后的Agent指导文件失败"
         );
-        ApiError::Database(format!("获取Agent指导文件失败: {}", e))
+        ApiError::Database { message: format!("获取Agent指导文件失败: {}", e) }
     })? {
         info!(
             id = %id,
@@ -231,14 +237,16 @@ pub async fn update_agent_guide(
 
         Ok(Json(ApiResponse::success_with_message(
             guide,
-            "Agent指导文件更新成功".to_string()
+            "Agent指导文件更新成功".to_string(),
         )))
     } else {
         error!(
             id = %id,
             "更新Agent指导文件后无法找到记录"
         );
-        Err(ApiError::Internal("更新Agent指导文件后无法找到记录".to_string()))
+        Err(ApiError::Internal {
+            message: "更新Agent指导文件后无法找到记录".to_string(),
+        })
     }
 }
 
@@ -265,7 +273,7 @@ pub async fn delete_agent_guide(
             id = %id,
             "检查Agent指导文件是否存在失败"
         );
-        ApiError::Database(format!("检查Agent指导文件失败: {}", e))
+        ApiError::Database { message: format!("检查Agent指导文件失败: {}", e) }
     })?;
 
     if existing.is_none() {
@@ -273,7 +281,7 @@ pub async fn delete_agent_guide(
             id = %id,
             "尝试删除不存在的Agent指导文件"
         );
-        return Err(ApiError::NotFound("Agent指导文件不存在".to_string()));
+        return Err(ApiError::NotFound { resource: "Agent指导文件不存在".to_string() });
     }
 
     // 删除记录
@@ -283,7 +291,7 @@ pub async fn delete_agent_guide(
             id = %id,
             "删除Agent指导文件失败"
         );
-        ApiError::Database(format!("删除Agent指导文件失败: {}", e))
+        ApiError::Database { message: format!("删除Agent指导文件失败: {}", e) }
     })?;
 
     if !deleted {
@@ -291,7 +299,7 @@ pub async fn delete_agent_guide(
             id = %id,
             "删除Agent指导文件未影响任何记录"
         );
-        return Err(ApiError::Internal("删除Agent指导文件失败".to_string()));
+        return Err(ApiError::Internal { message: "删除Agent指导文件失败".to_string() });
     }
 
     info!(
@@ -301,7 +309,7 @@ pub async fn delete_agent_guide(
 
     Ok(Json(ApiResponse::success_with_message(
         (),
-        "Agent指导文件删除成功".to_string()
+        "Agent指导文件删除成功".to_string(),
     )))
 }
 
@@ -329,7 +337,7 @@ pub async fn list_agent_guides(
                 search_term = %search_term,
                 "搜索Agent指导文件失败"
             );
-            ApiError::Database(format!("搜索Agent指导文件失败: {}", e))
+            ApiError::Database { message: format!("搜索Agent指导文件失败: {}", e) }
         })?;
 
         // 转换为分页响应格式
@@ -351,7 +359,7 @@ pub async fn list_agent_guides(
                 guide_type = %guide_type,
                 "根据类型获取Agent指导文件列表失败"
             );
-            ApiError::Database(format!("获取Agent指导文件列表失败: {}", e))
+            ApiError::Database { message: format!("获取Agent指导文件列表失败: {}", e) }
         })?;
 
         // 转换为分页响应格式
@@ -367,24 +375,21 @@ pub async fn list_agent_guides(
         paged_result
     } else {
         // 分页获取所有指导文件
-        let pagination_params = PaginationParams {
-            page: query.page,
-            limit: query.limit,
-            offset: query.offset,
-        };
+        let pagination_params =
+            PaginationParams { page: query.page, limit: query.limit, offset: query.offset };
 
         repository.paginate::<AgentGuide>(&pagination_params).await.map_err(|e| {
             error!(
                 error = %e,
                 "分页获取Agent指导文件列表失败"
             );
-            ApiError::Database(format!("获取Agent指导文件列表失败: {}", e))
+            ApiError::Database { message: format!("获取Agent指导文件列表失败: {}", e) }
         })?
     };
 
     let paged_response = crate::api::responses::PagedResponse::from_paged_result_with_message(
         result,
-        "获取Agent指导文件列表成功".to_string()
+        "获取Agent指导文件列表成功".to_string(),
     );
 
     Ok(Json(ApiResponse::success(paged_response)))
@@ -414,10 +419,14 @@ pub async fn validate_agent_guide(
                 "Agent指导文件内容验证完成"
             );
 
-            let message = if is_valid { "内容验证通过" } else { "内容验证失败" };
+            let message = if is_valid {
+                "内容验证通过"
+            } else {
+                "内容验证失败"
+            };
             Ok(Json(ApiResponse::success_with_message(
                 is_valid,
-                message.to_string()
+                message.to_string(),
             )))
         }
         Err(e) => {
@@ -426,7 +435,7 @@ pub async fn validate_agent_guide(
                 id = %id,
                 "Agent指导文件内容验证失败"
             );
-            Err(ApiError::Database(format!("内容验证失败: {}", e)))
+            Err(ApiError::Database { message: format!("内容验证失败: {}", e) })
         }
     }
 }
@@ -445,7 +454,7 @@ pub async fn get_agent_guide_stats(
             error = %e,
             "获取Agent指导文件总数失败"
         );
-        ApiError::Database(format!("获取统计信息失败: {}", e))
+        ApiError::Database { message: format!("获取统计信息失败: {}", e) }
     })?;
 
     // 获取only类型数量
@@ -454,7 +463,7 @@ pub async fn get_agent_guide_stats(
             error = %e,
             "获取only类型Agent指导文件数量失败"
         );
-        ApiError::Database(format!("获取统计信息失败: {}", e))
+        ApiError::Database { message: format!("获取统计信息失败: {}", e) }
     })?;
 
     // 获取and类型数量
@@ -463,7 +472,7 @@ pub async fn get_agent_guide_stats(
             error = %e,
             "获取and类型Agent指导文件数量失败"
         );
-        ApiError::Database(format!("获取统计信息失败: {}", e))
+        ApiError::Database { message: format!("获取统计信息失败: {}", e) }
     })?;
 
     let stats = serde_json::json!({
@@ -483,13 +492,13 @@ pub async fn get_agent_guide_stats(
 
     Ok(Json(ApiResponse::success_with_message(
         stats,
-        "获取Agent指导文件统计信息成功".to_string()
+        "获取Agent指导文件统计信息成功".to_string(),
     )))
 }
 
 /// Agent指导文件API路由
 pub fn routes() -> Router<ApiState> {
-    use axum::routing::{get, post, delete, put};
+    use axum::routing::{delete, get, post, put};
 
     Router::new()
         // 创建Agent指导文件

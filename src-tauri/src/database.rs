@@ -1,8 +1,8 @@
-use sqlx::{Row, Sqlite, Pool};
 use sqlx::migrate::MigrateDatabase;
+use sqlx::{Pool, Row, Sqlite};
 use std::time::Duration;
 use thiserror::Error;
-use tracing::{info, warn, error, debug};
+use tracing::{debug, error, info, warn};
 
 /// 数据库相关错误类型
 #[derive(Error, Debug)]
@@ -42,6 +42,7 @@ impl Default for DatabaseConfig {
 }
 
 /// 数据库连接池管理器
+#[derive(Clone)]
 pub struct DatabaseManager {
     pool: Pool<Sqlite>,
     config: DatabaseConfig,
@@ -53,13 +54,14 @@ impl DatabaseManager {
         info!("初始化数据库连接池，URL: {}", config.url);
 
         // 检查并创建数据库
-        if !Sqlite::database_exists(&config.url).await.map_err(|e| {
-            DatabaseError::Config(format!("检查数据库存在性失败: {}", e))
-        })? {
+        if !Sqlite::database_exists(&config.url)
+            .await
+            .map_err(|e| DatabaseError::Config(format!("检查数据库存在性失败: {}", e)))?
+        {
             warn!("数据库文件不存在，将创建新数据库");
-            Sqlite::create_database(&config.url).await.map_err(|e| {
-                DatabaseError::Config(format!("创建数据库失败: {}", e))
-            })?;
+            Sqlite::create_database(&config.url)
+                .await
+                .map_err(|e| DatabaseError::Config(format!("创建数据库失败: {}", e)))?;
             info!("✅ 数据库创建成功");
         }
 
@@ -72,15 +74,14 @@ impl DatabaseManager {
             .acquire_timeout(Duration::from_secs(30));
 
         // 创建连接池
-        let pool = pool_options.connect(&config.url).await
+        let pool = pool_options
+            .connect(&config.url)
+            .await
             .map_err(|e| DatabaseError::Connection(e))?;
 
         info!("✅ 数据库连接池创建成功");
 
-        let manager = Self {
-            pool,
-            config,
-        };
+        let manager = Self { pool, config };
 
         // 运行数据库迁移
         manager.run_migrations().await?;
@@ -115,9 +116,7 @@ impl DatabaseManager {
     pub async fn test_connection(&self) -> Result<(), DatabaseError> {
         debug!("测试数据库连接");
 
-        let result = sqlx::query("SELECT 1 as test")
-            .fetch_one(&self.pool)
-            .await;
+        let result = sqlx::query("SELECT 1 as test").fetch_one(&self.pool).await;
 
         match result {
             Ok(row) => {
@@ -138,10 +137,7 @@ impl DatabaseManager {
 
     /// 获取连接池状态信息
     pub async fn pool_status(&self) -> PoolStatus {
-        PoolStatus {
-            size: self.pool.size(),
-            idle: self.pool.num_idle() as u32,
-        }
+        PoolStatus { size: self.pool.size(), idle: self.pool.num_idle() as u32 }
     }
 
     /// 健康检查
@@ -167,7 +163,11 @@ pub struct PoolStatus {
 
 impl std::fmt::Display for PoolStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "连接池状态: 总连接数={}, 空闲连接数={}", self.size, self.idle)
+        write!(
+            f,
+            "连接池状态: 总连接数={}, 空闲连接数={}",
+            self.size, self.idle
+        )
     }
 }
 
@@ -182,7 +182,11 @@ impl<'a> QueryBuilder<'a> {
     }
 
     /// 执行原始SQL查询（简单版本，只支持字符串参数）
-    pub async fn execute_raw(&self, query: &str, params: &[&str]) -> Result<sqlx::sqlite::SqliteQueryResult, DatabaseError> {
+    pub async fn execute_raw(
+        &self,
+        query: &str,
+        params: &[&str],
+    ) -> Result<sqlx::sqlite::SqliteQueryResult, DatabaseError> {
         let mut query_builder = sqlx::query(query);
 
         for param in params {
@@ -285,10 +289,12 @@ mod tests {
         let query_builder = QueryBuilder::new(db_manager.pool());
 
         // 测试插入和查询
-        let result = query_builder.execute_raw(
-            "INSERT INTO common_configs (key, value, category) VALUES (?, ?, ?)",
-            &["test_key", "test_value", "test"]
-        ).await;
+        let result = query_builder
+            .execute_raw(
+                "INSERT INTO common_configs (key, value, category) VALUES (?, ?, ?)",
+                &["test_key", "test_value", "test"],
+            )
+            .await;
 
         assert!(result.is_ok());
 

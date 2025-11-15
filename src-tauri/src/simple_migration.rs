@@ -3,12 +3,12 @@
 //! 提供基本的数据导入导出功能
 
 use crate::crypto::CryptoService;
-use crate::database::{DatabaseManager, QueryBuilder};
+use crate::database::DatabaseManager;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
-use std::collections::HashMap;
 use thiserror::Error;
 use tracing::{info, warn};
+use std::collections::HashMap;
 
 /// 简化迁移错误
 #[derive(Error, Debug)]
@@ -36,14 +36,14 @@ pub struct SimpleMigrationTool {
 }
 
 impl SimpleMigrationTool {
-    pub async fn new(db_manager: DatabaseManager, encryption_key: &str) -> Result<Self, SimpleMigrationError> {
+    pub async fn new(
+        db_manager: DatabaseManager,
+        encryption_key: &str,
+    ) -> Result<Self, SimpleMigrationError> {
         let crypto_service = CryptoService::new(encryption_key)
             .map_err(|e| SimpleMigrationError::Crypto(e.to_string()))?;
 
-        Ok(Self {
-            crypto_service,
-            db_manager,
-        })
+        Ok(Self { crypto_service, db_manager })
     }
 
     /// 导出基本数据到JSON
@@ -61,15 +61,18 @@ impl SimpleMigrationTool {
 
         for row in provider_rows {
             let mut provider = HashMap::new();
-            provider.insert("id".to_string(), serde_json::Value::Number(
-                serde_json::Number::from(row.get::<i64, _>("id"))
-            ));
-            provider.insert("name".to_string(), serde_json::Value::String(
-                row.get::<String, _>("name")
-            ));
-            provider.insert("url".to_string(), serde_json::Value::String(
-                row.get::<String, _>("url")
-            ));
+            provider.insert(
+                "id".to_string(),
+                serde_json::Value::Number(serde_json::Number::from(row.get::<i64, _>("id"))),
+            );
+            provider.insert(
+                "name".to_string(),
+                serde_json::Value::String(row.get::<String, _>("name")),
+            );
+            provider.insert(
+                "url".to_string(),
+                serde_json::Value::String(row.get::<String, _>("url")),
+            );
 
             // 解密token
             let encrypted_token: String = row.get("token");
@@ -80,7 +83,10 @@ impl SimpleMigrationTool {
                     encrypted_token
                 }
             };
-            provider.insert("token".to_string(), serde_json::Value::String(decrypted_token));
+            provider.insert(
+                "token".to_string(),
+                serde_json::Value::String(decrypted_token),
+            );
 
             claude_providers.push(provider);
         }
@@ -93,15 +99,18 @@ impl SimpleMigrationTool {
 
         for row in config_rows {
             let mut config = HashMap::new();
-            config.insert("key".to_string(), serde_json::Value::String(
-                row.get::<String, _>("key")
-            ));
-            config.insert("value".to_string(), serde_json::Value::String(
-                row.get::<String, _>("value")
-            ));
-            config.insert("category".to_string(), serde_json::Value::String(
-                row.get::<String, _>("category")
-            ));
+            config.insert(
+                "key".to_string(),
+                serde_json::Value::String(row.get::<String, _>("key")),
+            );
+            config.insert(
+                "value".to_string(),
+                serde_json::Value::String(row.get::<String, _>("value")),
+            );
+            config.insert(
+                "category".to_string(),
+                serde_json::Value::String(row.get::<String, _>("category")),
+            );
             common_configs.push(config);
         }
 
@@ -122,60 +131,61 @@ impl SimpleMigrationTool {
 
         // 导入Claude供应商
         for provider_data in export_data.claude_providers {
-            let name = provider_data.get("name")
-                .and_then(|v| v.as_str())
-                .ok_or_else(|| SimpleMigrationError::Json(
-                    serde_json::Error::io(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected string for name field"))
-                ))?;
+            let name = provider_data.get("name").and_then(|v| v.as_str()).ok_or_else(|| {
+                SimpleMigrationError::Json(serde_json::Error::io(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Expected string for name field",
+                )))
+            })?;
 
-            let url = provider_data.get("url")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
+            let url = provider_data.get("url").and_then(|v| v.as_str()).unwrap_or("");
 
-            let token = provider_data.get("token")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
+            let token = provider_data.get("token").and_then(|v| v.as_str()).unwrap_or("");
 
             // 加密token
-            let encrypted_token = self.crypto_service.encrypt(token)
+            let encrypted_token = self
+                .crypto_service
+                .encrypt(token)
                 .map_err(|e| SimpleMigrationError::Crypto(e.to_string()))?;
 
             // 插入数据库
-            sqlx::query("INSERT OR REPLACE INTO claude_providers (name, url, token) VALUES (?, ?, ?)")
-                .bind(name)
-                .bind(url)
-                .bind(encrypted_token)
-                .execute(self.db_manager.pool())
-                .await
-                .map_err(|e| SimpleMigrationError::Database(e.to_string()))?;
+            sqlx::query(
+                "INSERT OR REPLACE INTO claude_providers (name, url, token) VALUES (?, ?, ?)",
+            )
+            .bind(name)
+            .bind(url)
+            .bind(encrypted_token)
+            .execute(self.db_manager.pool())
+            .await
+            .map_err(|e| SimpleMigrationError::Database(e.to_string()))?;
 
             info!("✅ 导入Claude供应商: {}", name);
         }
 
         // 导入通用配置
         for config_data in export_data.common_configs {
-            let key = config_data.get("key")
-                .and_then(|v| v.as_str())
-                .ok_or_else(|| SimpleMigrationError::Json(
-                    serde_json::Error::io(std::io::Error::new(std::io::ErrorKind::InvalidData, "Expected string for key field"))
-                ))?;
+            let key = config_data.get("key").and_then(|v| v.as_str()).ok_or_else(|| {
+                SimpleMigrationError::Json(serde_json::Error::io(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Expected string for key field",
+                )))
+            })?;
 
-            let value = config_data.get("value")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
+            let value = config_data.get("value").and_then(|v| v.as_str()).unwrap_or("");
 
-            let category = config_data.get("category")
-                .and_then(|v| v.as_str())
-                .unwrap_or("general");
+            let category =
+                config_data.get("category").and_then(|v| v.as_str()).unwrap_or("general");
 
             // 插入数据库
-            sqlx::query("INSERT OR REPLACE INTO common_configs (key, value, category) VALUES (?, ?, ?)")
-                .bind(key)
-                .bind(value)
-                .bind(category)
-                .execute(self.db_manager.pool())
-                .await
-                .map_err(|e| SimpleMigrationError::Database(e.to_string()))?;
+            sqlx::query(
+                "INSERT OR REPLACE INTO common_configs (key, value, category) VALUES (?, ?, ?)",
+            )
+            .bind(key)
+            .bind(value)
+            .bind(category)
+            .execute(self.db_manager.pool())
+            .await
+            .map_err(|e| SimpleMigrationError::Database(e.to_string()))?;
 
             info!("✅ 导入配置: {}", key);
         }
@@ -189,8 +199,8 @@ impl SimpleMigrationTool {
 mod tests {
     use super::*;
     use crate::database::DatabaseConfig;
-    use tempfile::tempdir;
     use std::time::Duration;
+    use tempfile::tempdir;
 
     async fn create_test_simple_migration() -> SimpleMigrationTool {
         let temp_dir = tempdir().unwrap();
@@ -207,7 +217,9 @@ mod tests {
         };
 
         let db_manager = DatabaseManager::new(config).await.unwrap();
-        SimpleMigrationTool::new(db_manager, "Jw4Ff1BWLnSykdfXDVOuEJCG6m9dyST5B1VhU_qg0fI=").await.unwrap()
+        SimpleMigrationTool::new(db_manager, "Jw4Ff1BWLnSykdfXDVOuEJCG6m9dyST5B1VhU_qg0fI=")
+            .await
+            .unwrap()
     }
 
     #[tokio::test]

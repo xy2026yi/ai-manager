@@ -8,14 +8,12 @@ use axum::{
     Router,
 };
 use serde::Deserialize;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
 use crate::api::error::ApiError;
 use crate::api::responses::{ApiResponse, PagedResponse};
-use crate::models::{McpServer, CreateMcpServerRequest, UpdateMcpServerRequest, PaginationParams};
-use crate::repositories::{McpServerRepository, BaseRepository};
-use crate::database::DatabaseManager;
-use crate::crypto::CryptoService;
+use crate::models::{CreateMcpServerRequest, McpServer, PaginationParams, UpdateMcpServerRequest};
+use crate::repositories::{BaseRepository, McpServerRepository};
 
 /// 重用API服务器的ApiState
 pub use super::super::server::ApiState;
@@ -64,7 +62,9 @@ pub async fn create_mcp_server(
     // 验证服务器类型（如果提供）
     if let Some(ref server_type) = request.r#type {
         if !["stdio", "sse", "websocket"].contains(&server_type.as_str()) {
-            return Err(ApiError::Validation("服务器类型必须是 'stdio'、'sse' 或 'websocket'".to_string()));
+            return Err(ApiError::Validation(
+                "服务器类型必须是 'stdio'、'sse' 或 'websocket'".to_string(),
+            ));
         }
     }
 
@@ -75,7 +75,7 @@ pub async fn create_mcp_server(
             name = %request.name,
             "创建MCP服务器失败"
         );
-        ApiError::Database(format!("创建MCP服务器失败: {}", e))
+        ApiError::Database { message: format!("创建MCP服务器失败: {}", e) }
     })?;
 
     // 获取创建的记录
@@ -85,7 +85,7 @@ pub async fn create_mcp_server(
             id = %id,
             "获取新创建的MCP服务器失败"
         );
-        ApiError::Database(format!("获取MCP服务器失败: {}", e))
+        ApiError::Database { message: format!("获取MCP服务器失败: {}", e) }
     })? {
         info!(
             id = %id,
@@ -95,14 +95,16 @@ pub async fn create_mcp_server(
 
         Ok(Json(ApiResponse::success_with_message(
             server,
-            "MCP服务器创建成功".to_string()
+            "MCP服务器创建成功".to_string(),
         )))
     } else {
         error!(
             id = %id,
             "创建MCP服务器后无法找到记录"
         );
-        Err(ApiError::Internal("创建MCP服务器后无法找到记录".to_string()))
+        Err(ApiError::Internal {
+            message: "创建MCP服务器后无法找到记录".to_string(),
+        })
     }
 }
 
@@ -132,7 +134,7 @@ pub async fn get_mcp_server(
 
             Ok(Json(ApiResponse::success_with_message(
                 server,
-                "获取MCP服务器详情成功".to_string()
+                "获取MCP服务器详情成功".to_string(),
             )))
         }
         Ok(None) => {
@@ -140,7 +142,7 @@ pub async fn get_mcp_server(
                 id = %id,
                 "MCP服务器不存在"
             );
-            Err(ApiError::NotFound("MCP服务器不存在".to_string()))
+            Err(ApiError::NotFound { resource: "MCP服务器不存在".to_string() })
         }
         Err(e) => {
             error!(
@@ -148,7 +150,7 @@ pub async fn get_mcp_server(
                 id = %id,
                 "获取MCP服务器详情失败"
             );
-            Err(ApiError::Database(format!("获取MCP服务器失败: {}", e)))
+            Err(ApiError::Database { message: format!("获取MCP服务器失败: {}", e) })
         }
     }
 }
@@ -177,7 +179,7 @@ pub async fn update_mcp_server(
             id = %id,
             "检查MCP服务器是否存在失败"
         );
-        ApiError::Database(format!("检查MCP服务器失败: {}", e))
+        ApiError::Database { message: format!("检查MCP服务器失败: {}", e) }
     })?;
 
     if existing.is_none() {
@@ -185,7 +187,7 @@ pub async fn update_mcp_server(
             id = %id,
             "尝试更新不存在的MCP服务器"
         );
-        return Err(ApiError::NotFound("MCP服务器不存在".to_string()));
+        return Err(ApiError::NotFound { resource: "MCP服务器不存在".to_string() });
     }
 
     // 验证更新数据
@@ -209,7 +211,9 @@ pub async fn update_mcp_server(
 
     if let Some(ref server_type) = request.r#type {
         if !["stdio", "sse", "websocket"].contains(&server_type.as_str()) {
-            return Err(ApiError::Validation("服务器类型必须是 'stdio'、'sse' 或 'websocket'".to_string()));
+            return Err(ApiError::Validation(
+                "服务器类型必须是 'stdio'、'sse' 或 'websocket'".to_string(),
+            ));
         }
     }
 
@@ -220,7 +224,7 @@ pub async fn update_mcp_server(
             id = %id,
             "更新MCP服务器失败"
         );
-        ApiError::Database(format!("更新MCP服务器失败: {}", e))
+        ApiError::Database { message: format!("更新MCP服务器失败: {}", e) }
     })?;
 
     if !updated {
@@ -228,7 +232,7 @@ pub async fn update_mcp_server(
             id = %id,
             "更新MCP服务器未影响任何记录"
         );
-        return Err(ApiError::Internal("更新MCP服务器失败".to_string()));
+        return Err(ApiError::Internal { message: "更新MCP服务器失败".to_string() });
     }
 
     // 获取更新后的记录
@@ -238,7 +242,7 @@ pub async fn update_mcp_server(
             id = %id,
             "获取更新后的MCP服务器失败"
         );
-        ApiError::Database(format!("获取MCP服务器失败: {}", e))
+        ApiError::Database { message: format!("获取MCP服务器失败: {}", e) }
     })? {
         info!(
             id = %id,
@@ -248,14 +252,16 @@ pub async fn update_mcp_server(
 
         Ok(Json(ApiResponse::success_with_message(
             server,
-            "MCP服务器更新成功".to_string()
+            "MCP服务器更新成功".to_string(),
         )))
     } else {
         error!(
             id = %id,
             "更新MCP服务器后无法找到记录"
         );
-        Err(ApiError::Internal("更新MCP服务器后无法找到记录".to_string()))
+        Err(ApiError::Internal {
+            message: "更新MCP服务器后无法找到记录".to_string(),
+        })
     }
 }
 
@@ -282,7 +288,7 @@ pub async fn delete_mcp_server(
             id = %id,
             "检查MCP服务器是否存在失败"
         );
-        ApiError::Database(format!("检查MCP服务器失败: {}", e))
+        ApiError::Database { message: format!("检查MCP服务器失败: {}", e) }
     })?;
 
     if existing.is_none() {
@@ -290,7 +296,7 @@ pub async fn delete_mcp_server(
             id = %id,
             "尝试删除不存在的MCP服务器"
         );
-        return Err(ApiError::NotFound("MCP服务器不存在".to_string()));
+        return Err(ApiError::NotFound { resource: "MCP服务器不存在".to_string() });
     }
 
     // 删除记录
@@ -300,7 +306,7 @@ pub async fn delete_mcp_server(
             id = %id,
             "删除MCP服务器失败"
         );
-        ApiError::Database(format!("删除MCP服务器失败: {}", e))
+        ApiError::Database { message: format!("删除MCP服务器失败: {}", e) }
     })?;
 
     if !deleted {
@@ -308,7 +314,7 @@ pub async fn delete_mcp_server(
             id = %id,
             "删除MCP服务器未影响任何记录"
         );
-        return Err(ApiError::Internal("删除MCP服务器失败".to_string()));
+        return Err(ApiError::Internal { message: "删除MCP服务器失败".to_string() });
     }
 
     info!(
@@ -318,7 +324,7 @@ pub async fn delete_mcp_server(
 
     Ok(Json(ApiResponse::success_with_message(
         (),
-        "MCP服务器删除成功".to_string()
+        "MCP服务器删除成功".to_string(),
     )))
 }
 
@@ -347,7 +353,7 @@ pub async fn list_mcp_servers(
                 search_term = %search_term,
                 "搜索MCP服务器失败"
             );
-            ApiError::Database(format!("搜索MCP服务器失败: {}", e))
+            ApiError::Database { message: format!("搜索MCP服务器失败: {}", e) }
         })?;
 
         // 转换为分页响应格式
@@ -369,7 +375,7 @@ pub async fn list_mcp_servers(
                 server_type = %server_type,
                 "根据类型获取MCP服务器列表失败"
             );
-            ApiError::Database(format!("获取MCP服务器列表失败: {}", e))
+            ApiError::Database { message: format!("获取MCP服务器列表失败: {}", e) }
         })?;
 
         // 转换为分页响应格式
@@ -390,7 +396,7 @@ pub async fn list_mcp_servers(
                 error = %e,
                 "获取活跃MCP服务器列表失败"
             );
-            ApiError::Database(format!("获取MCP服务器列表失败: {}", e))
+            ApiError::Database { message: format!("获取MCP服务器列表失败: {}", e) }
         })?;
 
         // 转换为分页响应格式
@@ -405,24 +411,21 @@ pub async fn list_mcp_servers(
         paged_result
     } else {
         // 分页获取所有服务器
-        let pagination_params = PaginationParams {
-            page: query.page,
-            limit: query.limit,
-            offset: query.offset,
-        };
+        let pagination_params =
+            PaginationParams { page: query.page, limit: query.limit, offset: query.offset };
 
         repository.paginate::<McpServer>(&pagination_params).await.map_err(|e| {
             error!(
                 error = %e,
                 "分页获取MCP服务器列表失败"
             );
-            ApiError::Database(format!("获取MCP服务器列表失败: {}", e))
+            ApiError::Database { message: format!("获取MCP服务器列表失败: {}", e) }
         })?
     };
 
     let paged_response = crate::api::responses::PagedResponse::from_paged_result_with_message(
         result,
-        "获取MCP服务器列表成功".to_string()
+        "获取MCP服务器列表成功".to_string(),
     );
 
     Ok(Json(ApiResponse::success(paged_response)))
@@ -452,10 +455,14 @@ pub async fn test_mcp_server(
                 "MCP服务器配置测试完成"
             );
 
-            let message = if is_valid { "配置测试通过" } else { "配置测试失败" };
+            let message = if is_valid {
+                "配置测试通过"
+            } else {
+                "配置测试失败"
+            };
             Ok(Json(ApiResponse::success_with_message(
                 is_valid,
-                message.to_string()
+                message.to_string(),
             )))
         }
         Err(e) => {
@@ -464,7 +471,7 @@ pub async fn test_mcp_server(
                 id = %id,
                 "MCP服务器配置测试失败"
             );
-            Err(ApiError::Database(format!("配置测试失败: {}", e)))
+            Err(ApiError::Database { message: format!("配置测试失败: {}", e) })
         }
     }
 }
@@ -483,7 +490,7 @@ pub async fn get_mcp_server_stats(
             error = %e,
             "获取MCP服务器总数失败"
         );
-        ApiError::Database(format!("获取统计信息失败: {}", e))
+        ApiError::Database { message: format!("获取统计信息失败: {}", e) }
     })?;
 
     // 获取stdio类型数量
@@ -492,7 +499,7 @@ pub async fn get_mcp_server_stats(
             error = %e,
             "获取stdio类型MCP服务器数量失败"
         );
-        ApiError::Database(format!("获取统计信息失败: {}", e))
+        ApiError::Database { message: format!("获取统计信息失败: {}", e) }
     })?;
 
     // 获取sse类型数量
@@ -501,7 +508,7 @@ pub async fn get_mcp_server_stats(
             error = %e,
             "获取sse类型MCP服务器数量失败"
         );
-        ApiError::Database(format!("获取统计信息失败: {}", e))
+        ApiError::Database { message: format!("获取统计信息失败: {}", e) }
     })?;
 
     // 获取活跃服务器数量
@@ -510,7 +517,7 @@ pub async fn get_mcp_server_stats(
             error = %e,
             "获取活跃MCP服务器数量失败"
         );
-        ApiError::Database(format!("获取统计信息失败: {}", e))
+        ApiError::Database { message: format!("获取统计信息失败: {}", e) }
     })?;
     let active_count = active_servers.len() as i64;
 
@@ -535,13 +542,13 @@ pub async fn get_mcp_server_stats(
 
     Ok(Json(ApiResponse::success_with_message(
         stats,
-        "获取MCP服务器统计信息成功".to_string()
+        "获取MCP服务器统计信息成功".to_string(),
     )))
 }
 
 /// MCP服务器API路由
 pub fn routes() -> Router<ApiState> {
-    use axum::routing::{get, post, delete, put};
+    use axum::routing::{delete, get, post, put};
 
     Router::new()
         // 创建MCP服务器

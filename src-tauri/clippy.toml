@@ -1,0 +1,45 @@
+# Clippy代码质量检查配置
+# 使用最小化的有效配置选项
+
+# 复杂度阈值
+cognitive-complexity-threshold = 30
+too-many-arguments-threshold = 7
+too-many-lines-threshold = 100
+type-complexity-threshold = 250
+
+# 字面量阈值
+array-size-threshold = 512000
+max-fn-params-bools = 3
+max-struct-bools = 3
+max-trait-bounds = 5
+
+# 单字符标识符
+single-char-binding-names-threshold = 4
+
+# 允许的标识符
+allowed-scripts = ["Latin"]
+allow-expect-in-tests = true
+allow-dbg-in-tests = true
+allow-unwrap-in-tests = true
+
+# 禁用的名称（使用新选项）
+disallowed-names = ["foo", "bar", "baz", "quux"]
+
+# 上限阈值
+upper-case-acronyms-aggressive = false
+allowed-prefixes = ["to", "as", "into", "from", "try_into", "try_from", "try"]
+
+# 大型类型
+large-error-threshold = 256
+
+# 性能相关配置
+warn-on-all-wildcard-imports = true
+
+# 过度复杂表达式
+excessive-nesting-threshold = 10
+
+# 数组阈值
+vec-box-size-threshold = 4096
+
+# 代码风格
+msrv = "1.70.0"

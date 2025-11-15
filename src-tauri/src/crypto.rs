@@ -1,6 +1,6 @@
 use fernet::Fernet;
-use thiserror::Error;
 use std::env;
+use thiserror::Error;
 
 /// 加密相关错误类型
 #[derive(Error, Debug)]
@@ -25,9 +25,7 @@ pub struct CryptoService {
 
 impl std::fmt::Debug for CryptoService {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("CryptoService")
-            .field("fernet", &"Fernet Instance")
-            .finish()
+        f.debug_struct("CryptoService").field("fernet", &"Fernet Instance").finish()
     }
 }
 
@@ -60,7 +58,8 @@ impl CryptoService {
 
     /// 解密文本数据
     pub fn decrypt(&self, ciphertext: &str) -> Result<String, CryptoError> {
-        let decrypted = self.fernet
+        let decrypted = self
+            .fernet
             .decrypt(ciphertext)
             .map_err(|e| CryptoError::Decryption(e.to_string()))?;
         Ok(String::from_utf8(decrypted).map_err(|e| CryptoError::Decryption(e.to_string()))?)
@@ -68,18 +67,12 @@ impl CryptoService {
 
     /// 批量加密字符串数组
     pub fn encrypt_batch(&self, items: &[String]) -> Result<Vec<String>, CryptoError> {
-        items
-            .iter()
-            .map(|item| self.encrypt(item))
-            .collect()
+        items.iter().map(|item| self.encrypt(item)).collect()
     }
 
     /// 批量解密字符串数组
     pub fn decrypt_batch(&self, items: &[String]) -> Result<Vec<String>, CryptoError> {
-        items
-            .iter()
-            .map(|item| self.decrypt(item))
-            .collect()
+        items.iter().map(|item| self.decrypt(item)).collect()
     }
 
     /// 验证数据完整性（通过尝试解密）
@@ -106,11 +99,19 @@ pub mod testing {
 
         // 加密
         let encrypted = crypto.encrypt(test_data)?;
-        println!("✅ 加密成功: {} -> {}", test_data, &encrypted[..20.min(encrypted.len())]);
+        println!(
+            "✅ 加密成功: {} -> {}",
+            test_data,
+            &encrypted[..20.min(encrypted.len())]
+        );
 
         // 解密
         let decrypted = crypto.decrypt(&encrypted)?;
-        println!("✅ 解密成功: {} -> {}", &encrypted[..20.min(encrypted.len())], decrypted);
+        println!(
+            "✅ 解密成功: {} -> {}",
+            &encrypted[..20.min(encrypted.len())],
+            decrypted
+        );
 
         // 验证
         assert_eq!(test_data, decrypted);
@@ -207,7 +208,7 @@ pub mod python_compatibility {
             "测试中文".to_string(),
             "API Token: sk-1234567890".to_string(),
             "🔒🔐🔑".to_string(),
-            "".to_string(), // 空字符串
+            "".to_string(),   // 空字符串
             "A".repeat(1000), // 长字符串
         ];
 
