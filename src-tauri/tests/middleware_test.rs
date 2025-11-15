@@ -6,8 +6,9 @@ use axum::{
     Router,
     http::{StatusCode, Request, Method},
     body::Body,
-    response::Json,
+    response::{IntoResponse, Json},
     routing::{get, post},
+    middleware,
 };
 use migration_ai_manager_lib::{
     api::{request_tracking_middleware, add_request_id_header, global_error_handler},
@@ -19,11 +20,12 @@ fn create_test_app() -> Router {
     Router::new()
         .route("/", get(|| async { "Hello World" }))
         .route("/error", get(|| async {
-            Json(ApiError::BadRequest("测试错误".to_string()))
+            // Json(ApiError::BadRequest("测试错误".to_string()))
+            ApiError::BadRequest("测试错误".to_string()).into_response()
         }))
-        .layer(global_error_handler)
-        .layer(add_request_id_header)
-        .layer(request_tracking_middleware)
+        .layer(middleware::from_fn(global_error_handler))
+        .layer(middleware::from_fn(add_request_id_header))
+        .layer(middleware::from_fn(request_tracking_middleware))
 }
 
 #[tokio::test]
@@ -72,9 +74,9 @@ async fn test_middleware_integration() {
     // 测试多个中间件的集成
     let app = Router::new()
         .route("/", get(|| async { "Middleware Test Success" }))
-        .layer(global_error_handler)
-        .layer(add_request_id_header)
-        .layer(request_tracking_middleware);
+        .layer(middleware::from_fn(global_error_handler))
+        .layer(middleware::from_fn(add_request_id_header))
+        .layer(middleware::from_fn(request_tracking_middleware));
 
     let request = Request::builder()
         .uri("/")
@@ -92,7 +94,8 @@ async fn test_middleware_integration() {
     assert!(request_id.is_some(), "应该包含请求ID头");
 
     // 可以手动检查响应内容
-    let body_bytes = axum::body::to_bytes(response.into_body(), hyper::body::SizeHint::default()).await.unwrap();
+    // let body_bytes = axum::body::to_bytes(response.into_body(), hyper::body::SizeHint::default()).await.unwrap();
+    let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
     let body_str = String::from_utf8(body_bytes.to_vec()).unwrap();
     assert_eq!(body_str, "Middleware Test Success");
 }
