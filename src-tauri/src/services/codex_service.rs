@@ -516,7 +516,7 @@ mod tests {
             r#type: Some("gpt-4".to_string()),
         };
 
-        let id = service.create_provider(create_request).await.unwrap();
+        let id = service.create_provider(&create_request).await.unwrap();
         assert!(id > 0);
 
         // 验证可以获取创建的供应商
@@ -540,7 +540,7 @@ mod tests {
             r#type: None,
         };
 
-        let result = service.create_provider(create_request).await;
+        let result = service.create_provider(&create_request).await;
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), CodexServiceError::Validation(_)));
     }
@@ -557,7 +557,7 @@ mod tests {
             r#type: None,
         };
 
-        let id = service.create_provider(create_request).await.unwrap();
+        let id = service.create_provider(&create_request).await.unwrap();
 
         // 测试禁用
         let disabled = service.disable_provider(id).await.unwrap();
