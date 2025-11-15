@@ -34,6 +34,10 @@ env/
 *.db
 *.sqlite
 *.sqlite3
+*.db-shm
+*.db-wal
+*.sqlite-shm
+*.sqlite-wal
 
 # 环境变量
 .env
