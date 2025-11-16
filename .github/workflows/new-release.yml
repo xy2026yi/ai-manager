@@ -3,11 +3,11 @@ name: 快速构建和发布 AI Manager (仅构建)
 # 触发条件：手动触发或推送代码
 on:
   workflow_dispatch:
-  push:
-    branches: [ main, develop ]
-    tags: [ 'v*' ]
-  pull_request:
-    branches: [ main ]
+#   push:
+#     branches: [ main, develop ]
+#     tags: [ 'v*' ]
+#   pull_request:
+#     branches: [ main ]
 
 env:
   CARGO_TERM_COLOR: always
