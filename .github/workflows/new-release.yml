@@ -176,7 +176,7 @@ jobs:
         echo "✅ 前端构建完成"
 
     - name: 构建 Tauri 应用 (Tauri 2.x)
-      uses: tauri-apps/tauri-action@v1
+      uses: tauri-apps/tauri-action@v0.6.0
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
