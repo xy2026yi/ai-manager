@@ -125,10 +125,6 @@ jobs:
     - name: Clippy 静态分析
       working-directory: src-tauri
       run: |
-        # 设置环境变量绕过 javascriptcore-rs-sys 问题
-        export JAVASCRIPTCORE_R_SYS_NO_PKG_CONFIG=1
-        export PKG_CONFIG_ALLOW_CROSS=1
-
         echo "进行核心代码质量检查..."
 
         # 使用正确的 lint 名称，允许非关键警告
