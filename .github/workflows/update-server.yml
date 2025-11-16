@@ -1,8 +1,12 @@
 name: 更新服务器同步
 
-on:
-  release:
-    types: [published]
+# 禁用触发条件改为手动
+# on:
+#   release:
+#     types: [published]
+#
+# 只允许手动触发
+on: workflow_dispatch
 
 jobs:
   update-server:
@@ -125,9 +129,9 @@ jobs:
         https://github.com/${{ github.repository }}/releases/latest
 
         ## 技术支持
-        - 用户手册: https://docs.ai-manager.com/user-manual
-        - 故障排除: https://docs.ai-manager.com/troubleshooting
-        - 技术支持: support@ai-manager.com
+        - 用户手册: https://docs.xxx.com/user-manual
+        - 故障排除: https://docs.xxx.com/troubleshooting
+        - 技术支持: support@xxx.com
         EOF
 
     - name: 构建总结
@@ -136,4 +140,4 @@ jobs:
         echo "📊 版本: ${{ steps.version.outputs.version }}"
         echo "🔄 自动更新已启用"
         echo "📱 支持平台: Windows, macOS, Linux"
-        echo "🌐 更新服务器: https://updates.ai-manager.com"
+        echo "🌐 更新服务器: https://updates.xxx.com"

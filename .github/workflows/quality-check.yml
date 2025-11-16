@@ -1,10 +1,14 @@
 name: 代码质量检查
 
-on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
+# 改为手动触发
+# on:
+#   push:
+#     branches: [ main, develop ]
+#   pull_request:
+#     branches: [ main ]
+
+# 只允许手动触发
+on: workflow_dispatch
 
 jobs:
   # Rust 代码质量检查

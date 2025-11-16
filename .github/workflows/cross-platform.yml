@@ -1,22 +1,26 @@
 name: 跨平台兼容性测试
 
+# 改为手动触发
 # 触发条件
-on:
-  push:
-    branches: [ master, main, develop ]
-    paths:
-      - 'src-tauri/**'
-      - 'tests/**'
-      - '.github/workflows/cross-platform.yml'
-  pull_request:
-    branches: [ master, main, develop ]
-    paths:
-      - 'src-tauri/**'
-      - 'tests/**'
-  schedule:
-    # 每周一凌晨2点运行，确保跨平台兼容性
-    - cron: '0 2 * * 1'
-  workflow_dispatch:  # 允许手动触发
+# on:
+#   push:
+#     branches: [ master, main, develop ]
+#     paths:
+#       - 'src-tauri/**'
+#       - 'tests/**'
+#       - '.github/workflows/cross-platform.yml'
+#   pull_request:
+#     branches: [ master, main, develop ]
+#     paths:
+#       - 'src-tauri/**'
+#       - 'tests/**'
+#   schedule:
+#     # 每周一凌晨2点运行，确保跨平台兼容性
+#     - cron: '0 2 * * 1'
+#   workflow_dispatch:  # 允许手动触发
+
+# 只允许手动触发
+on: workflow_dispatch
 
 env:
   RUST_BACKTRACE: 1
