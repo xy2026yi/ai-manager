@@ -169,7 +169,7 @@ export default function ClaudeProviders() {
 
     try {
       setLoading(true);
-      await providerService.delete(selectedProvider.id);
+      await providerService.deleteById(selectedProvider.id);
       setIsDeleteModalOpen(false);
       setSelectedProvider(null);
       await loadProviders();

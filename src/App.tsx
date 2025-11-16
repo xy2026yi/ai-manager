@@ -13,7 +13,7 @@ import Dashboard from './pages/Dashboard';
 import ClaudeProviders from './pages/ClaudeProviders';
 import CodexProviders from './pages/CodexProviders';
 import AgentGuides from './pages/AgentGuides';
-import McpServers from './pages/McpServers';
+import McpServers from './pages/MCPServers';
 import CommonConfigs from './pages/CommonConfigs';
 import Settings from './pages/Settings';
 

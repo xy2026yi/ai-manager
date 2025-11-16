@@ -2,7 +2,9 @@
 //
 // 统一处理与后端API的通信，包括请求封装、错误处理和重试机制
 
-import { invoke } from '@tauri-apps/api/tauri';
+import { invoke } from '@tauri-apps/api/core';
+import { open } from '@tauri-apps/plugin-shell';
+import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import type {
   ApiResponse,
   ApiErrorResponse,
@@ -174,7 +176,7 @@ export class ClaudeProviderService extends BaseApiService {
     return this.get<PagedResult<ClaudeProvider>>('/claude-providers', params);
   }
 
-  async get(id: number): Promise<ClaudeProvider> {
+  async getById(id: number): Promise<ClaudeProvider> {
     return this.get<ClaudeProvider>(`/claude-providers/${id}`);
   }
 
@@ -186,7 +188,7 @@ export class ClaudeProviderService extends BaseApiService {
     return this.put<ClaudeProvider>(`/claude-providers/${id}`, data);
   }
 
-  async delete(id: number): Promise<void> {
+  async deleteById(id: number): Promise<void> {
     return this.delete<void>(`/claude-providers/${id}`);
   }
 
@@ -205,7 +207,7 @@ export class CodexProviderService extends BaseApiService {
     return this.get<PagedResult<CodexProvider>>('/codex-providers', params);
   }
 
-  async get(id: number): Promise<CodexProvider> {
+  async getById(id: number): Promise<CodexProvider> {
     return this.get<CodexProvider>(`/codex-providers/${id}`);
   }
 
@@ -217,7 +219,7 @@ export class CodexProviderService extends BaseApiService {
     return this.put<CodexProvider>(`/codex-providers/${id}`, data);
   }
 
-  async delete(id: number): Promise<void> {
+  async deleteById(id: number): Promise<void> {
     return this.delete<void>(`/codex-providers/${id}`);
   }
 
@@ -236,7 +238,7 @@ export class AgentGuideService extends BaseApiService {
     return this.get<PagedResult<AgentGuide>>('/agent-guides', params);
   }
 
-  async get(id: number): Promise<AgentGuide> {
+  async getById(id: number): Promise<AgentGuide> {
     return this.get<AgentGuide>(`/agent-guides/${id}`);
   }
 
@@ -248,7 +250,7 @@ export class AgentGuideService extends BaseApiService {
     return this.put<AgentGuide>(`/agent-guides/${id}`, data);
   }
 
-  async delete(id: number): Promise<void> {
+  async deleteById(id: number): Promise<void> {
     return this.delete<void>(`/agent-guides/${id}`);
   }
 
@@ -267,7 +269,7 @@ export class McpServerService extends BaseApiService {
     return this.get<PagedResult<McpServer>>('/mcp-servers', params);
   }
 
-  async get(id: number): Promise<McpServer> {
+  async getById(id: number): Promise<McpServer> {
     return this.get<McpServer>(`/mcp-servers/${id}`);
   }
 
@@ -279,7 +281,7 @@ export class McpServerService extends BaseApiService {
     return this.put<McpServer>(`/mcp-servers/${id}`, data);
   }
 
-  async delete(id: number): Promise<void> {
+  async deleteById(id: number): Promise<void> {
     return this.delete<void>(`/mcp-servers/${id}`);
   }
 
@@ -298,7 +300,7 @@ export class CommonConfigService extends BaseApiService {
     return this.get<PagedResult<CommonConfig>>('/common-configs', params);
   }
 
-  async get(id: number): Promise<CommonConfig> {
+  async getById(id: number): Promise<CommonConfig> {
     return this.get<CommonConfig>(`/common-configs/${id}`);
   }
 
@@ -314,7 +316,7 @@ export class CommonConfigService extends BaseApiService {
     return this.put<CommonConfig>(`/common-configs/${id}`, data);
   }
 
-  async delete(id: number): Promise<void> {
+  async deleteById(id: number): Promise<void> {
     return this.delete<void>(`/common-configs/${id}`);
   }
 
@@ -350,22 +352,23 @@ export const mcpServerService = new McpServerService();
 export const commonConfigService = new CommonConfigService();
 export const systemService = new SystemService();
 
-// Tauri命令服务（用于文件操作等）
+// Tauri命令服务（使用 Tauri 2.x 插件 API）
 export class TauriCommandService {
   async openPath(path: string): Promise<void> {
-    await invoke('open_path', { path });
+    await open(path);
   }
 
   async saveFile(path: string, content: string): Promise<void> {
-    await invoke('save_file', { path, content });
+    await writeTextFile(path, content);
   }
 
   async readFile(path: string): Promise<string> {
-    return await invoke<string>('read_file', { path });
+    return await readTextFile(path);
   }
 
   async showInFolder(path: string): Promise<void> {
-    await invoke('show_in_folder', { path });
+    // Tauri 2.x 中使用 shell 插件显示文件所在文件夹
+    await open(path);
   }
 }
 

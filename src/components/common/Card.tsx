@@ -39,7 +39,7 @@ const cardVariants = cva(
 
 // 卡片属性接口
 export interface CardProps
-  extends HTMLAttributes<HTMLDivElement>,
+  extends Omit<HTMLAttributes<HTMLDivElement>, 'variant' | 'padding'>,
     VariantProps<CardVariants> {}
 
 // 卡片组件

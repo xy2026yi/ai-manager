@@ -153,7 +153,12 @@ jobs:
             target: x86_64-pc-windows-msvc
             ext: .exe
             bundle: msi
-          # macOS
+          # macOS Intel
+          - platform: macos-latest
+            target: x86_64-apple-darwin
+            ext: ""
+            bundle: app
+          # macOS Apple Silicon
           - platform: macos-latest
             target: aarch64-apple-darwin
             ext: ""
@@ -169,17 +174,46 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: 缓存 Rust 依赖
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          src-tauri/target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
+
+    - name: 缓存 Node.js 依赖
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.npm
+          node_modules/
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
+
     - name: 安装 Rust
       uses: dtolnay/rust-toolchain@stable
       with:
         targets: ${{ matrix.target }}
 
+    - name: 安装 Tauri CLI 2.x
+      uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-tauri@2.0
+
     - name: 安装 Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '20'
+        cache: 'npm'
 
-    - name: 安装 Linux 依赖
+    - name: 安装 Linux 依赖 (Tauri 2.x)
       if: matrix.target == 'x86_64-unknown-linux-gnu'
       run: |
         sudo apt-get update
@@ -225,63 +259,43 @@ jobs:
           libxss-dev \
           libxtst-dev \
           pkg-config \
-          build-essential
+          build-essential \
+          libayatana-appindicator3-dev \
+          librsvg2-dev
 
-    - name: 创建兼容性软链接
-      if: matrix.target == 'x86_64-unknown-linux-gnu'
+    - name: 安装 macOS 依赖 (Tauri 2.x)
+      if: matrix.platform == 'macos-latest'
       run: |
-        # 为新版本 Ubuntu 创建 libwebkit2gtk-4.0 兼容链接
-        sudo ln -sf /usr/lib/x86_64-linux-gnu/libwebkit2gtk-4.1.so.0 /usr/lib/x86_64-linux-gnu/libwebkit2gtk-4.0.so.0
-        sudo ln -sf /usr/lib/x86_64-linux-gnu/libwebkit2gtk-4.1.so /usr/lib/x86_64-linux-gnu/libwebkit2gtk-4.0.so
+        # 确保 Xcode 命令行工具已安装
+        xcode-select --install || true
 
-        # 为新版本 Ubuntu 创建 libjavascriptcoregtk-4.0 兼容链接
-        sudo ln -sf /usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.1.so.0 /usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so.0
-        sudo ln -sf /usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.1.so /usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so
+    - name: 安装 Windows 依赖 (Tauri 2.x)
+      if: matrix.platform == 'windows-latest'
+      run: |
+        # Windows 环境通常不需要额外依赖，Tauri 2.x 会处理大部分工作
+        echo "Windows Tauri 2.x 环境准备完成"
 
-        # 解决javascriptcore-rs-sys问题
-        sudo ln -sf /usr/lib/x86_64-linux-gnu/pkgconfig/javascriptcoregtk-4.1.pc /usr/lib/x86_64-linux-gnu/pkgconfig/javascriptcoregtk-4.0.pc
-        sudo ln -sf /usr/lib/x86_64-linux-gnu/pkgconfig/webkit2gtk-4.1.pc /usr/lib/x86_64-linux-gnu/pkgconfig/webkit2gtk-4.0.pc
+    - name: 验证 Tauri 版本
+      run: |
+        cargo tauri --version
+        echo "✅ Tauri CLI 版本验证完成"
 
     - name: 安装前端依赖
-      run: npm install
+      run: npm ci
 
-    - name: 构建前端
-      continue-on-error: true
+    - name: 构建前端 (Tauri 2.x 兼容)
       run: |
-        echo "开始构建前端应用..."
-        if npm run build; then
-          echo "✅ 前端构建成功"
-        else
-          echo "⚠️ 前端构建失败，但继续 Rust 应用构建"
-          echo "前端构建错误不会阻止 Tauri 应用的打包"
-        fi
+        echo "🔨 构建 Tauri 2.x 前端应用..."
+        npm run build
+        echo "✅ 前端构建完成"
 
-    - name: 构建 Rust 应用
-      working-directory: src-tauri
-      run: cargo build --release --target ${{ matrix.target }}
-
-    - name: 准备构建环境
-      if: matrix.platform == 'windows-latest'
-      working-directory: src-tauri
-      run: |
-        rustup target add x86_64-pc-windows-msvc
-        cargo install tauri-cli --version "^1.0"
-
-    - name: 创建 macOS Universal 二进制文件
-      if: matrix.target == 'aarch64-apple-darwin'
-      run: |
-        # 创建临时目录存储构建产物
-        mkdir -p build-output
-        echo "BUILD_TARGET=${{ matrix.target }}" >> $GITHUB_ENV
-        echo "BUILD_OUTPUT=build-output" >> $GITHUB_ENV
-
-    - name: 构建 Tauri 应用
-      uses: tauri-apps/tauri-action@v0
+    - name: 构建 Tauri 应用 (Tauri 2.x)
+      uses: tauri-apps/tauri-action@v2
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tauriScript: npm run tauri
-        args: --target ${{ matrix.target }}
+        tauriScript: cargo tauri
+        args: build --target ${{ matrix.target }}
         includeDebug: false
         includeRelease: true
 

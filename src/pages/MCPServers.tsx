@@ -13,13 +13,13 @@ import {
   refreshTriggerAtom
 } from '../stores';
 import { useAtom } from 'jotai';
-import { MCPServer, MCPServerService } from '../services/api';
+import { McpServer, McpServerService } from '../services/api';
 
 /**
  * MCP服务器管理页面
  * 提供MCP服务器的增删改查功能
  */
-export default function MCPServers() {
+export default function McpServers() {
   // 状态管理
   const [servers, setServers] = useAtom(mcpServersAtom);
   const [selectedServer, setSelectedServer] = useAtom(selectedMCPServerAtom);
@@ -32,10 +32,10 @@ export default function MCPServers() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [showToken, setShowToken] = useState<{ [key: number]: boolean }>({});
-  const [formData, setFormData] = useState<Partial<MCPServer>>({});
+  const [formData, setFormData] = useState<Partial<McpServer>>({});
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-  const serverService = new MCPServerService();
+  const serverService = new McpServerService();
 
   // 加载服务器列表
   useEffect(() => {
@@ -56,7 +56,7 @@ export default function MCPServers() {
   };
 
   // 验证表单数据
-  const validateForm = (data: Partial<MCPServer>): Record<string, string> => {
+  const validateForm = (data: Partial<McpServer>): Record<string, string> => {
     const errors: Record<string, string> = {};
 
     if (!data.name?.trim()) {
@@ -116,7 +116,7 @@ export default function MCPServers() {
 
     try {
       setLoading(true);
-      await serverService.create(formData as Omit<MCPServer, 'id' | 'created_at' | 'updated_at'>);
+      await serverService.create(formData as Omit<McpServer, 'id' | 'created_at' | 'updated_at'>);
       setIsCreateModalOpen(false);
       resetForm();
       await loadServers();
@@ -128,7 +128,7 @@ export default function MCPServers() {
   };
 
   // 打开编辑模态框
-  const handleEdit = (server: MCPServer) => {
+  const handleEdit = (server: McpServer) => {
     setSelectedServer(server);
     setFormData({ ...server });
     setFormErrors({});
@@ -147,7 +147,7 @@ export default function MCPServers() {
 
     try {
       setLoading(true);
-      await serverService.update(selectedServer.id, formData as Partial<MCPServer>);
+      await serverService.update(selectedServer.id, formData as Partial<McpServer>);
       setIsEditModalOpen(false);
       setSelectedServer(null);
       resetForm();
@@ -160,7 +160,7 @@ export default function MCPServers() {
   };
 
   // 打开删除确认框
-  const handleDelete = (server: MCPServer) => {
+  const handleDelete = (server: McpServer) => {
     setSelectedServer(server);
     setIsDeleteModalOpen(true);
   };
@@ -171,7 +171,7 @@ export default function MCPServers() {
 
     try {
       setLoading(true);
-      await serverService.delete(selectedServer.id);
+      await serverService.deleteById(selectedServer.id);
       setIsDeleteModalOpen(false);
       setSelectedServer(null);
       await loadServers();
@@ -183,7 +183,7 @@ export default function MCPServers() {
   };
 
   // 切换启用状态
-  const handleToggleEnabled = async (server: MCPServer) => {
+  const handleToggleEnabled = async (server: McpServer) => {
     try {
       setLoading(true);
       await serverService.update(server.id, { is_enabled: !server.is_enabled });
@@ -201,7 +201,7 @@ export default function MCPServers() {
   };
 
   // 构建完整地址
-  const buildAddress = (server: MCPServer) => {
+  const buildAddress = (server: McpServer) => {
     const protocol = server.protocol || 'http';
     const port = server.port || (protocol === 'https' ? 443 : 80);
     return `${protocol}://${server.host}:${port}`;
@@ -212,7 +212,7 @@ export default function MCPServers() {
     {
       key: 'name',
       title: '服务器名称',
-      render: (server: MCPServer) => (
+      render: (server: McpServer) => (
         <div className="flex items-center">
           <div className="flex-shrink-0 h-10 w-10 bg-purple-100 rounded-full flex items-center justify-center">
             <Server className="h-6 w-6 text-purple-600" />
@@ -231,7 +231,7 @@ export default function MCPServers() {
     {
       key: 'address',
       title: '服务器地址',
-      render: (server: MCPServer) => (
+      render: (server: McpServer) => (
         <div className="flex items-center space-x-2">
           <Link className="h-4 w-4 text-gray-400" />
           <span className="text-sm font-mono text-gray-900 dark:text-white">
@@ -243,7 +243,7 @@ export default function MCPServers() {
     {
       key: 'token',
       title: '认证Token',
-      render: (server: MCPServer) => (
+      render: (server: McpServer) => (
         <div className="flex items-center space-x-2">
           <span className="text-sm font-mono text-gray-900 dark:text-white">
             {server.auth_token
@@ -273,7 +273,7 @@ export default function MCPServers() {
     {
       key: 'connection',
       title: '连接配置',
-      render: (server: MCPServer) => (
+      render: (server: McpServer) => (
         <div className="text-sm text-gray-900 dark:text-white">
           <div>最大连接：{server.max_connections}</div>
           <div>超时：{server.timeout}s</div>
@@ -284,7 +284,7 @@ export default function MCPServers() {
     {
       key: 'status',
       title: '状态',
-      render: (server: MCPServer) => (
+      render: (server: McpServer) => (
         <div className="flex flex-col space-y-1">
           <span
             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -305,7 +305,7 @@ export default function MCPServers() {
     {
       key: 'actions',
       title: '操作',
-      render: (server: MCPServer) => (
+      render: (server: McpServer) => (
         <div className="flex items-center space-x-2">
           <Button
             variant={server.is_enabled ? "warning" : "success"}

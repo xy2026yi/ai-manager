@@ -155,7 +155,7 @@ export default function CommonConfigs() {
 
     try {
       setLoading(true);
-      await configService.delete(selectedConfig.id);
+      await configService.deleteById(selectedConfig.id);
       setIsDeleteModalOpen(false);
       setSelectedConfig(null);
       await loadConfigs();

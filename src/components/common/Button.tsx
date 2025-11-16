@@ -44,7 +44,7 @@ const buttonVariants = cva(
 
 // 按钮属性接口
 export interface ButtonProps
-  extends ButtonHTMLAttributes<HTMLButtonElement>,
+  extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'variant' | 'size'>,
     VariantProps<ButtonVariants> {
   asChild?: boolean;
   loading?: boolean;
@@ -103,7 +103,7 @@ Button.displayName = 'Button';
 export const IconButton = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = 'ghost', size = 'sm', ...props }, ref) => (
     <Button
-      className={buttonVariants({ variant, size, className })}
+      className={buttonVariants({ variant, size, className: className || '' })}
       ref={ref}
       {...props}
     />
@@ -119,6 +119,3 @@ export const LoadingButton = forwardRef<HTMLButtonElement, ButtonProps>(
 );
 
 LoadingButton.displayName = 'LoadingButton';
-
-// 导出类型
-export type { ButtonProps };

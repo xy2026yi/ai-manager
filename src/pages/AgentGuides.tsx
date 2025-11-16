@@ -178,7 +178,7 @@ export default function AgentGuides() {
 
     try {
       setLoading(true);
-      await guideService.delete(selectedGuide.id);
+      await guideService.deleteById(selectedGuide.id);
       setIsDeleteModalOpen(false);
       setSelectedGuide(null);
       await loadGuides();

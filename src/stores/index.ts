@@ -125,7 +125,7 @@ export const agentGuideStatsAtom = atom<AgentGuideStats | null>(null);
 export const mcpServersAtom = atom<PagedResult<McpServer> | null>(null);
 
 // 当前选中的MCP服务器
-export const selectedMcpServerAtom = atom<McpServer | null>(null);
+export const selectedMCPServerAtom = atom<McpServer | null>(null);
 
 // MCP服务器加载状态
 export const mcpServersLoadingAtom = atom(false);
@@ -296,7 +296,7 @@ export const atoms = {
 
   // MCP服务器
   mcpServersAtom,
-  selectedMcpServerAtom,
+  selectedMCPServerAtom,
   mcpServersLoadingAtom,
   mcpServersSearchAtom,
   mcpServerStatsAtom,
