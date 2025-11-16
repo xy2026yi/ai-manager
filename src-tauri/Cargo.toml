@@ -3,9 +3,21 @@ name = "migration-ai-manager"
 version = "0.1.0"
 description = "AI Manager - 从 Python/FastAPI 迁移到 Rust/Tauri"
 authors = ["AI Migration Team"]
-license = ""
-repository = ""
+license = "MIT"
+repository = "https://github.com/ai-manager/migration"
 edition = "2021"
+
+# 优化发布构建
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+strip = true
+opt-level = "s"
+
+# 为发布构建进一步优化
+[profile.release.package."*"]
+opt-level = "s"
 
 [[bin]]
 name = "migration-ai-manager"

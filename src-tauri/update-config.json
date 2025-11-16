@@ -1,0 +1,23 @@
+{
+  "version": "0.1.0",
+  "notes": "初始发布版本\n- 完整的AI管理功能\n- 高性能轻量级架构\n- 完整的中文本地化支持",
+  "pub_date": "2025-11-16T00:00:00Z",
+  "platforms": {
+    "windows-x86_64": {
+      "signature": "",
+      "url": "https://github.com/ai-manager/migration/releases/download/v0.1.0/AI-Manager_0.1.0_x64-setup.exe"
+    },
+    "darwin-x86_64": {
+      "signature": "",
+      "url": "https://github.com/ai-manager/migration/releases/download/v0.1.0/AI-Manager_0.1.0_x64.app.tar.gz"
+    },
+    "darwin-aarch64": {
+      "signature": "",
+      "url": "https://github.com/ai-manager/migration/releases/download/v0.1.0/AI-Manager_0.1.0_aarch64.app.tar.gz"
+    },
+    "linux-x86_64": {
+      "signature": "",
+      "url": "https://github.com/ai-manager/migration/releases/download/v0.1.0/AI-Manager_0.1.0_amd64.AppImage"
+    }
+  }
+}

@@ -1,5 +1,4 @@
 {
-  "$schema": "https://schema.tauri.app/config/1.0.0",
   "build": {
     "beforeBuildCommand": "npm run build",
     "beforeDevCommand": "npm run dev",
@@ -31,9 +30,9 @@
     "bundle": {
       "active": true,
       "category": "Utility",
-      "copyright": "",
+      "copyright": "Copyright © 2025 AI Manager Team. All rights reserved.",
       "deb": {
-        "depends": []
+        "depends": ["libwebkit2gtk-4.0-37", "libnotify4", "libnss3", "libxss1", "libxtst6", "xdg-utils", "libatspi2.0-0", "libdrm2", "libxcomposite1", "libxdamage1", "libxrandr2", "libgbm1", "libxkbcommon0", "libxfixes3"]
       },
       "externalBin": [],
       "icon": [
@@ -56,16 +55,17 @@
         "icons/linux/icon-512x512.png"
       ],
       "identifier": "com.aimanager.migration",
-      "longDescription": "",
+      "longDescription": "AI Manager 是一个轻量级、高性能的AI工具管理平台，从 Python/FastAPI 迁移到 Rust/Tauri，提供更好的用户体验和更小的安装体积。",
       "macOS": {
         "entitlements": null,
         "exceptionDomain": "",
         "frameworks": [],
-        "providerShortName": null,
-        "signingIdentity": null
+        "providerShortName": "AIManager",
+        "signingIdentity": null,
+        "minimumSystemVersion": "10.13"
       },
       "resources": [],
-      "shortDescription": "",
+      "shortDescription": "AI工具管理平台 - 高性能轻量级版本",
       "targets": "all",
       "windows": {
         "certificateThumbprint": null,
@@ -74,15 +74,22 @@
       }
     },
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: https:; connect-src ipc: http://ipc.localhost"
+    },
+    "updater": {
+      "active": false,
+      "dialog": true,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDFFNEI0QjZGQUI4ODc4RTcKUldSWkRaU0NQWW41QzJWSmJQZ01YamFlVzJqU09qVlR2NGtBUTJyYzFOTkE1Ym5TUQo2Y0RrTjRNdTVnYUc5dHJEaURqL0hKZFlwNExNUkhVdFhSLzJCQUJxCg=="
     },
     "windows": [
       {
         "fullscreen": false,
         "height": 900,
         "resizable": true,
-        "title": "AI Manager - Migration Version",
-        "width": 1200
+        "title": "AI Manager",
+        "width": 1200,
+        "minHeight": 700,
+        "minWidth": 1000
       }
     ]
   }
