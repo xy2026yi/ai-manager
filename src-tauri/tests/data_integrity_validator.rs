@@ -2,14 +2,12 @@
 //!
 //! 提供数据迁移前后的完整性校验机制
 
-use migration_ai_manager_lib::database::{DatabaseConfig, DatabaseManager};
-use migration_ai_manager_lib::migration_tool::{DataMigrationTool, PythonExportData};
-use migration_ai_manager_lib::models::*;
-use serde_json;
+#![allow(dead_code)]
+
+use migration_ai_manager_lib::database::DatabaseManager;
+use migration_ai_manager_lib::migration_tool::PythonExportData;
 use sqlx::Row;
 use std::collections::HashMap;
-use std::time::Duration;
-use tempfile::tempdir;
 use tracing::{error, info, warn};
 
 /// 数据完整性校验结果
@@ -556,7 +554,7 @@ impl DataIntegrityValidator {
         {
             Ok(rows) => {
                 let mut encrypted_count = 0;
-                let mut total_count = rows.len();
+                let total_count = rows.len();
 
                 for row in rows {
                     let token: String = row.get("token");
@@ -601,7 +599,7 @@ impl DataIntegrityValidator {
         {
             Ok(rows) => {
                 let mut encrypted_count = 0;
-                let mut total_count = rows.len();
+                let total_count = rows.len();
 
                 for row in rows {
                     let token: String = row.get("token");
@@ -700,7 +698,7 @@ impl DataIntegrityValidator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use migration_ai_manager_lib::crypto::CryptoService;
+    
 
     #[tokio::test]
     async fn test_integrity_validator_creation() {
@@ -718,7 +716,7 @@ mod tests {
         };
 
         let db_manager = DatabaseManager::new(config).await.unwrap();
-        let validator = DataIntegrityValidator::new(db_manager);
+        let _validator = DataIntegrityValidator::new(db_manager);
 
         // 如果能创建到这里，说明成功
         assert!(true);

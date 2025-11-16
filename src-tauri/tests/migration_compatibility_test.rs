@@ -5,14 +5,12 @@
 use migration_ai_manager_lib::crypto::{python_compatibility, CryptoService};
 use migration_ai_manager_lib::database::{DatabaseConfig, DatabaseManager};
 use migration_ai_manager_lib::migration_tool::{DataMigrationTool, PythonExportData};
-use migration_ai_manager_lib::models::*;
 use serde_json;
 use sqlx;
 use std::fs;
 use std::path::Path;
 use std::time::Duration;
 use tempfile::tempdir;
-use tracing::{error, info, warn};
 
 /// 测试设置结构体
 struct TestSetup {

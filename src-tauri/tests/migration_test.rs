@@ -1,15 +1,12 @@
 // 数据迁移兼容性测试
 // 验证从原Python项目迁移数据的完整性和格式一致性
 
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use migration_ai_manager_lib::{
-    crypto::CryptoService, database::DatabaseManager, migration::DataMigrator, models::*,
-    repositories::BaseRepository,
+    crypto::CryptoService,
 };
 use sqlx::{Row, SqlitePool};
 use std::collections::HashMap;
-use std::path::Path;
-use tempfile::tempdir;
 
 // 测试数据结构
 #[derive(Debug)]
@@ -17,6 +14,7 @@ struct TestDataRecord {
     table_name: String,
     original_count: i64,
     migrated_count: i64,
+    #[allow(dead_code)]
     mismatched_fields: Vec<String>,
     integrity_issues: Vec<String>,
 }
@@ -25,6 +23,7 @@ struct TestDataRecord {
 struct DataIntegrityValidator {
     original_db: SqlitePool,
     migrated_db: SqlitePool,
+    #[allow(dead_code)]
     crypto_service: CryptoService,
 }
 
@@ -471,6 +470,7 @@ impl DataIntegrityValidator {
     }
 
     // 生成数据完整性报告
+    #[allow(dead_code)]
     fn generate_integrity_report(
         &self,
         schema_results: Vec<TestDataRecord>,

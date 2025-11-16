@@ -362,7 +362,7 @@ impl DataCompatibilityTestRunner {
         };
 
         let db_manager = DatabaseManager::new(db_config).await?;
-        let validator = DataIntegrityValidator::new(db_manager);
+        let _validator = DataIntegrityValidator::new(db_manager);
 
         // 简化的完整性测试 - 只检查表是否存在和有数据
         let pool = self.config.create_temp_db_pool().await?;

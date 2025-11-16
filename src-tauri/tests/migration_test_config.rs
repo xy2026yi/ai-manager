@@ -2,6 +2,8 @@
 //
 // 提供测试数据库连接和配置参数
 
+#![allow(dead_code)]
+
 use sqlx::SqlitePool;
 use std::path::{Path, PathBuf};
 

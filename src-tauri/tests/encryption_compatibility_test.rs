@@ -6,10 +6,8 @@ use migration_ai_manager_lib::crypto::{python_compatibility, CryptoService};
 use migration_ai_manager_lib::database::{DatabaseConfig, DatabaseManager};
 use migration_ai_manager_lib::migration_tool::DataMigrationTool;
 use serde_json;
-use std::collections::HashMap;
 use std::time::Duration;
 use tempfile::tempdir;
-use tracing::{error, info, warn};
 
 #[tokio::test]
 async fn test_python_fernet_compatibility() {
@@ -140,7 +138,7 @@ async fn test_migration_with_encrypted_data() {
     let crypto_service = CryptoService::new("Jw4Ff1BWLnSykdfXDVOuEJCG6m9dyST5B1VhU_qg0fI=")
         .expect("加密服务创建失败");
 
-    let mut test_data = create_encrypted_test_data(&crypto_service);
+    let test_data = create_encrypted_test_data(&crypto_service);
 
     // 导入预加密的数据
     let json_content = serde_json::to_string(&test_data).expect("JSON序列化失败");

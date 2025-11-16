@@ -6,8 +6,8 @@ use axum::{
     body::Body,
     http::{Method, Request, StatusCode},
     middleware,
-    response::{IntoResponse, Json},
-    routing::{get, post},
+    response::IntoResponse,
+    routing::get,
     Router,
 };
 use migration_ai_manager_lib::{

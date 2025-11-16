@@ -4,7 +4,6 @@
 
 use reqwest;
 use serde_json::json;
-use std::collections::HashMap;
 use tokio;
 
 // API服务器基础URL

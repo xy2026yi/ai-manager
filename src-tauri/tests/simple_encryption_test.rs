@@ -23,7 +23,7 @@ async fn test_encryption_roundtrip() {
         .expect("加密服务创建应该成功");
 
     // 测试用例
-    let binding = "A".repeat(1000);
+    let _binding = "A".repeat(1000);
     let test_cases = vec![
         "sk-ant-api03-test-key-1",
         "sk-test-openai-key-1",
