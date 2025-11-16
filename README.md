@@ -1,4 +1,5 @@
 # AI Manager
+# 纯AI写的试玩项目，请勿当真
 
 🚀 **AI Manager** 是一个轻量级、高性能的AI工具管理平台，从 Python/FastAPI 迁移到 Rust/Tauri 架构，为用户提供更好的体验和更小的安装体积。
 
