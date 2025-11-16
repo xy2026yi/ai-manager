@@ -97,36 +97,36 @@ impl Validator {
     }
 
     /// 验证Agent指导文件名称
-    pub fn validate_agent_guide_name<'a>(value: &'a str) -> ValidationResult<&'a str> {
+    pub fn validate_agent_guide_name(value: &str) -> ValidationResult<&str> {
         Self::validate_non_empty(value, "指导文件名称")
             .and_then(|name| Self::validate_string_length(name, "指导文件名称", 1, 200))
     }
 
     /// 验证Agent指导文件内容
-    pub fn validate_agent_guide_content<'a>(value: &'a str) -> ValidationResult<&'a str> {
+    pub fn validate_agent_guide_content(value: &str) -> ValidationResult<&str> {
         Self::validate_non_empty(value, "指导文件内容")
             .and_then(|content| Self::validate_string_length(content, "指导文件内容", 1, 100000))
     }
 
     /// 验证配置键名
-    pub fn validate_config_key<'a>(value: &'a str) -> ValidationResult<&'a str> {
+    pub fn validate_config_key(value: &str) -> ValidationResult<&str> {
         Self::validate_non_empty(value, "配置键名")
             .and_then(|key| Self::validate_string_length(key, "配置键名", 1, 100))
     }
 
     /// 验证配置值
-    pub fn validate_config_value<'a>(value: &'a str) -> ValidationResult<&'a str> {
+    pub fn validate_config_value(value: &str) -> ValidationResult<&str> {
         Self::validate_string_length(value, "配置值", 0, 10000)
     }
 
     /// 验证配置类别
-    pub fn validate_config_category<'a>(value: &'a str) -> ValidationResult<&'a str> {
+    pub fn validate_config_category(value: &str) -> ValidationResult<&str> {
         Self::validate_non_empty(value, "配置类别")
             .and_then(|category| Self::validate_string_length(category, "配置类别", 1, 50))
     }
 
     /// 验证服务器名称
-    pub fn validate_server_name<'a>(value: &'a str) -> ValidationResult<&'a str> {
+    pub fn validate_server_name(value: &str) -> ValidationResult<&str> {
         Self::validate_non_empty(value, "服务器名称")
             .and_then(|name| Self::validate_string_length(name, "服务器名称", 1, 100))
     }
