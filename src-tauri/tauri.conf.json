@@ -1,96 +1,103 @@
 {
+  "$schema": "https://schema.tauri.app/config/2.0.0",
+  "productName": "AI Manager",
+  "version": "0.1.0",
+  "identifier": "com.aimanager.migration",
   "build": {
     "beforeBuildCommand": "npm run build",
     "beforeDevCommand": "npm run dev",
-    "devPath": "http://localhost:1420",
-    "distDir": "../dist"
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../dist"
   },
-  "package": {
-    "productName": "AI Manager",
-    "version": "0.1.0"
-  },
-  "tauri": {
-    "allowlist": {
-      "all": false,
-      "shell": {
-        "all": false,
-        "open": true
-      },
-      "fs": {
-        "all": false,
-        "readFile": true,
-        "writeFile": true,
-        "createDir": true,
-        "removeDir": true,
-        "removeFile": true,
-        "renameFile": true,
-        "exists": true
-      }
-    },
-    "bundle": {
-      "active": true,
-      "category": "Utility",
-      "copyright": "Copyright © 2025 AI Manager Team. All rights reserved.",
-      "deb": {
-        "depends": ["libwebkit2gtk-4.0-37", "libnotify4", "libnss3", "libxss1", "libxtst6", "xdg-utils", "libatspi2.0-0", "libdrm2", "libxcomposite1", "libxdamage1", "libxrandr2", "libgbm1", "libxkbcommon0", "libxfixes3"]
-      },
-      "externalBin": [],
-      "icon": [
-        "icons/32x32.png",
-        "icons/128x128.png",
-        "icons/128x128@2x.png",
-        "icons/icon.png",
-        "icons/icon.svg",
-        "icons/macos/icon_128x128.png",
-        "icons/macos/icon_128x128@2x.png",
-        "icons/macos/icon_256x256.png",
-        "icons/macos/icon_256x256@2x.png",
-        "icons/windows/app.ico",
-        "icons/windows/icon-32x32.png",
-        "icons/linux/icon-16x16.png",
-        "icons/linux/icon-32x32.png",
-        "icons/linux/icon-48x48.png",
-        "icons/linux/icon-128x128.png",
-        "icons/linux/icon-256x256.png",
-        "icons/linux/icon-512x512.png"
-      ],
-      "identifier": "com.aimanager.migration",
-      "longDescription": "AI Manager 是一个轻量级、高性能的AI工具管理平台，从 Python/FastAPI 迁移到 Rust/Tauri，提供更好的用户体验和更小的安装体积。",
-      "macOS": {
-        "entitlements": null,
-        "exceptionDomain": "",
-        "frameworks": [],
-        "providerShortName": "AIManager",
-        "signingIdentity": null,
-        "minimumSystemVersion": "10.13"
-      },
-      "resources": [],
-      "shortDescription": "AI工具管理平台 - 高性能轻量级版本",
-      "targets": "all",
-      "windows": {
-        "certificateThumbprint": null,
-        "digestAlgorithm": "sha256",
-        "timestampUrl": ""
-      }
-    },
+  "app": {
     "security": {
       "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: https:; connect-src ipc: http://ipc.localhost"
     },
-    "updater": {
-      "active": false,
-      "dialog": true,
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDFFNEI0QjZGQUI4ODc4RTcKUldSWkRaU0NQWW41QzJWSmJQZ01YamFlVzJqU09qVlR2NGtBUTJyYzFOTkE1Ym5TUQo2Y0RrTjRNdTVnYUc5dHJEaURqL0hKZFlwNExNUkhVdFhSLzJCQUJxCg=="
-    },
     "windows": [
       {
-        "fullscreen": false,
-        "height": 900,
-        "resizable": true,
         "title": "AI Manager",
         "width": 1200,
+        "height": 900,
+        "minWidth": 1000,
         "minHeight": 700,
-        "minWidth": 1000
+        "resizable": true,
+        "fullscreen": false
       }
     ]
+  },
+  "bundle": {
+    "active": true,
+    "category": "Utility",
+    "copyright": "Copyright © 2025 AI Manager Team. All rights reserved.",
+    "linux": {
+      "deb": {
+        "depends": [
+          "libwebkit2gtk-4.1-0",
+          "libnotify4",
+          "libnss3",
+          "libxss1",
+          "libxtst6",
+          "xdg-utils",
+          "libatspi2.0-0",
+          "libdrm2",
+          "libxcomposite1",
+          "libxdamage1",
+          "libxrandr2",
+          "libgbm1",
+          "libxkbcommon0",
+          "libxfixes3"
+        ]
+      }
+    },
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.png",
+      "icons/icon.svg",
+      "icons/macos/icon_128x128.png",
+      "icons/macos/icon_128x128@2x.png",
+      "icons/macos/icon_256x256.png",
+      "icons/macos/icon_256x256@2x.png",
+      "icons/windows/app.ico",
+      "icons/windows/icon-32x32.png",
+      "icons/linux/icon-16x16.png",
+      "icons/linux/icon-32x32.png",
+      "icons/linux/icon-48x48.png",
+      "icons/linux/icon-128x128.png",
+      "icons/linux/icon-256x256.png",
+      "icons/linux/icon-512x512.png"
+    ],
+    "macOS": {
+      "entitlements": null,
+      "exceptionDomain": "",
+      "frameworks": [],
+      "providerShortName": "AIManager",
+      "signingIdentity": null,
+      "minimumSystemVersion": "10.13"
+    },
+    "resources": [],
+    "shortDescription": "AI工具管理平台 - 高性能轻量级版本",
+    "longDescription": "AI Manager 是一个轻量级、高性能的AI工具管理平台，从 Python/FastAPI 迁移到 Rust/Tauri，提供更好的用户体验和更小的安装体积。",
+    "targets": "all",
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": ""
+    }
+  },
+  "plugins": {
+    "shell": {
+      "open": true
+    },
+    "fs": {
+      "readFile": true,
+      "writeFile": true,
+      "createDir": true,
+      "removeDir": true,
+      "removeFile": true,
+      "renameFile": true,
+      "exists": true
+    }
   }
 }

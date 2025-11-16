@@ -7,7 +7,7 @@
 
 // 从 library crate 导入必要的模块
 use migration_ai_manager_lib::LoggingManager;
-use tauri::Manager;
+use tauri::Emitter;
 
 // Tauri 基础命令
 #[tauri::command]
@@ -29,6 +29,8 @@ fn main() {
 
     // 启动Tauri应用
     let result = tauri::Builder::default()
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_fs::init())
         .invoke_handler(tauri::generate_handler![greet])
         .setup(|app| {
             // 在Tauri设置阶段启动后台初始化任务
@@ -38,7 +40,7 @@ fn main() {
                 delayed_initialization().await;
 
                 // 可选：通知前端初始化完成
-                if let Err(e) = app_handle.emit_all("initialization_complete", ()) {
+                if let Err(e) = app_handle.emit_to("main", "initialization_complete", ()) {
                     eprintln!("发送初始化完成事件失败: {}", e);
                 }
             });

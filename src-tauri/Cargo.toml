@@ -13,15 +13,25 @@ panic = "abort"
 codegen-units = 1
 lto = true
 strip = true
-opt-level = "s"
+opt-level = "z"
+debug = false
+overflow-checks = false
 
 # 为发布构建进一步优化
 [profile.release.package."*"]
-opt-level = "s"
+opt-level = "z"
+
+# 构建时优化
+[profile.dev]
+opt-level = 1
+debug = true
+overflow-checks = false
 
 [[bin]]
 name = "migration-ai-manager"
 path = "src/main.rs"
+
+default-run = "migration-ai-manager"
 
 [[bin]]
 name = "api_server"
@@ -38,10 +48,12 @@ path = "src/lib.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
-tauri-build = { version = "1.5", features = [] }
+tauri-build = { version = "2.0", features = [] }
 
 [dependencies]
-tauri = { version = "1.5", features = ["fs-create-dir", "fs-exists", "fs-read-file", "fs-remove-dir", "fs-remove-file", "fs-rename-file", "fs-write-file", "shell-open"] }
+tauri = { version = "2.0", features = ["rustls-tls"] }
+tauri-plugin-shell = "2.0"
+tauri-plugin-fs = "2.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "macros"] }
