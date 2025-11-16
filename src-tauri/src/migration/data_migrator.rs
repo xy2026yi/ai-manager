@@ -317,13 +317,15 @@ impl DataMigrator {
     async fn migrate_claude_providers(&self, python_pool: &SqlitePool) -> Result<MigrationStats> {
         let query = r#"
             SELECT id, name, url, token, timeout, created_at, updated_at
-            FROM claude_providers 
+            FROM claude_providers
             ORDER BY id
         "#;
 
         let rows = sqlx::query(query).fetch_all(python_pool).await?;
-        let mut stats = MigrationStats::default();
-        stats.total_records = rows.len() as i64;
+        let mut stats = MigrationStats {
+            total_records: rows.len() as i64,
+            ..Default::default()
+        };
 
         for row in rows {
             let provider = CreateClaudeProviderRequest {
@@ -360,13 +362,15 @@ impl DataMigrator {
     async fn migrate_codex_providers(&self, python_pool: &SqlitePool) -> Result<MigrationStats> {
         let query = r#"
             SELECT id, name, url, token, type, created_at, updated_at
-            FROM codex_providers 
+            FROM codex_providers
             ORDER BY id
         "#;
 
         let rows = sqlx::query(query).fetch_all(python_pool).await?;
-        let mut stats = MigrationStats::default();
-        stats.total_records = rows.len() as i64;
+        let mut stats = MigrationStats {
+            total_records: rows.len() as i64,
+            ..Default::default()
+        };
 
         for row in rows {
             let provider = CreateCodexProviderRequest {
@@ -398,13 +402,15 @@ impl DataMigrator {
     async fn migrate_agent_guides(&self, python_pool: &SqlitePool) -> Result<MigrationStats> {
         let query = r#"
             SELECT id, name, type, text, created_at, updated_at
-            FROM agent_guides 
+            FROM agent_guides
             ORDER BY id
         "#;
 
         let rows = sqlx::query(query).fetch_all(python_pool).await?;
-        let mut stats = MigrationStats::default();
-        stats.total_records = rows.len() as i64;
+        let mut stats = MigrationStats {
+            total_records: rows.len() as i64,
+            ..Default::default()
+        };
 
         for row in rows {
             let guide = CreateAgentGuideRequest {
@@ -435,13 +441,15 @@ impl DataMigrator {
     async fn migrate_mcp_servers(&self, python_pool: &SqlitePool) -> Result<MigrationStats> {
         let query = r#"
             SELECT id, name, type, timeout, command, args, env, created_at, updated_at
-            FROM mcp_servers 
+            FROM mcp_servers
             ORDER BY id
         "#;
 
         let rows = sqlx::query(query).fetch_all(python_pool).await?;
-        let mut stats = MigrationStats::default();
-        stats.total_records = rows.len() as i64;
+        let mut stats = MigrationStats {
+            total_records: rows.len() as i64,
+            ..Default::default()
+        };
 
         for row in rows {
             // 解析 args（假设存储为 JSON 字符串）
@@ -484,13 +492,15 @@ impl DataMigrator {
     async fn migrate_common_configs(&self, python_pool: &SqlitePool) -> Result<MigrationStats> {
         let query = r#"
             SELECT id, key, value, description, category, is_active, created_at, updated_at
-            FROM common_configs 
+            FROM common_configs
             ORDER BY id
         "#;
 
         let rows = sqlx::query(query).fetch_all(python_pool).await?;
-        let mut stats = MigrationStats::default();
-        stats.total_records = rows.len() as i64;
+        let mut stats = MigrationStats {
+            total_records: rows.len() as i64,
+            ..Default::default()
+        };
 
         for row in rows {
             let config = CreateCommonConfigRequest {
@@ -529,8 +539,8 @@ impl DataMigrator {
         .bind(&request.name)
         .bind(&request.url)
         .bind(&request.token)
-        .bind(&request.timeout)
-        .bind(&request.auto_update)
+        .bind(request.timeout)
+        .bind(request.auto_update)
         .bind(&request.r#type)
         .bind(&request.opus_model)
         .bind(&request.sonnet_model)
@@ -585,7 +595,7 @@ impl DataMigrator {
         let args_json = serde_json::to_string(&request.args)?;
 
         // 将 env 序列化为 JSON 字符串
-        let env_json = request.env.as_ref().map(|e| serde_json::to_string(e)).transpose()?;
+        let env_json = request.env.as_ref().map(serde_json::to_string).transpose()?;
 
         let id = sqlx::query(
             r#"
@@ -595,7 +605,7 @@ impl DataMigrator {
         )
         .bind(&request.name)
         .bind(&request.r#type)
-        .bind(&request.timeout)
+        .bind(request.timeout)
         .bind(&request.command)
         .bind(&args_json)
         .bind(&env_json)
@@ -618,7 +628,7 @@ impl DataMigrator {
         .bind(&request.value)
         .bind(&request.description)
         .bind(&request.category)
-        .bind(&request.is_active)
+        .bind(request.is_active)
         .execute(self.db_manager.pool())
         .await?;
 

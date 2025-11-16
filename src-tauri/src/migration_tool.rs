@@ -451,7 +451,7 @@ impl DataMigrationTool {
     /// 导入单个MCP服务器
     async fn import_mcp_server(&self, server: &PythonMcpServer) -> Result<(), MigrationError> {
         let args_json = serde_json::to_string(&server.args)?;
-        let env_json = server.env.as_ref().map(|e| serde_json::to_string(e)).transpose()?;
+        let env_json = server.env.as_ref().map(serde_json::to_string).transpose()?;
 
         let query = r#"
             INSERT INTO mcp_servers

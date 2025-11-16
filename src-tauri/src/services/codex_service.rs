@@ -70,7 +70,7 @@ impl CodexProviderService {
         );
 
         // 验证请求
-        self.validate_create_request(&request)?;
+        self.validate_create_request(request)?;
 
         // 检查名称唯一性
         if let Some(existing) = self.find_by_name(&request.name).await? {
@@ -84,7 +84,7 @@ impl CodexProviderService {
         }
 
         // 创建供应商记录
-        let id = self.repository.create_codex_provider(&request).await?;
+        let id = self.repository.create_codex_provider(request).await?;
 
         info!(
             id = %id,

@@ -31,7 +31,7 @@ impl McpServerRepository {
     ) -> RepositoryResult<i64> {
         // 将args和env序列化为JSON字符串
         let args_json = serde_json::to_string(&request.args)?;
-        let env_json = request.env.as_ref().map(|env| serde_json::to_string(env)).transpose()?;
+        let env_json = request.env.as_ref().map(serde_json::to_string).transpose()?;
 
         let query = r#"
             INSERT INTO mcp_servers (
@@ -82,7 +82,7 @@ impl McpServerRepository {
         };
 
         let env_json = if let Some(ref env_option) = request.env {
-            env_option.as_ref().map(|env| serde_json::to_string(env)).transpose()?
+            env_option.as_ref().map(serde_json::to_string).transpose()?
         } else {
             None
         };

@@ -132,7 +132,7 @@ impl Validator {
     }
 
     /// 验证URL格式
-    pub fn validate_url<'a>(value: &'a str) -> ValidationResult<&'a str> {
+    pub fn validate_url(value: &str) -> ValidationResult<&str> {
         if value.trim().is_empty() {
             return Ok(value); // 允许空URL
         }

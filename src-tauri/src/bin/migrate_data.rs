@@ -108,12 +108,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 fn print_usage() {
     println!("用法: migrate_data <源数据库路径> [目标数据库路径] [--dry-run]");
-    println!("");
+    println!();
     println!("示例:");
     println!("  migrate_data ../ai-manager/ai_manager.db");
     println!("  migrate_data ../ai-manager/ai_manager.db data/new_ai_manager.db");
     println!("  migrate_data ../ai-manager/ai_manager.db --dry-run");
-    println!("");
+    println!();
     println!("参数:");
     println!("  源数据库路径    - 原Python版本的数据库文件");
     println!("  目标数据库路径  - 新Rust版本的数据库文件（默认: data/ai_manager.db）");

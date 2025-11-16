@@ -103,7 +103,7 @@ impl DatabaseManager {
             pool_options
                 .connect(&config.url)
                 .await
-                .map_err(|e| DatabaseError::Connection(e))
+                .map_err(DatabaseError::Connection)
         };
 
         // 等待连接池建立
@@ -207,7 +207,7 @@ impl DatabaseManager {
                 sqlx::query("SELECT 1")
                     .fetch_one(pool)
                     .await
-                    .map_err(|e| DatabaseError::Connection(e))?;
+                    .map_err(DatabaseError::Connection)?;
 
                 Ok::<(), DatabaseError>(())
             })

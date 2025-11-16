@@ -2,7 +2,6 @@
 //
 // 统一执行所有数据迁移和加密兼容性测试
 
-use sqlx;
 use std::collections::HashMap;
 use std::path::Path;
 use std::time::Instant;
@@ -517,7 +516,7 @@ impl DataCompatibilityTestRunner {
                     content.push_str(&format!("  - {}\n", failure));
                 }
             }
-            content.push_str("\n");
+            content.push('\n');
         }
 
         // 数据迁移测试结果
@@ -535,7 +534,7 @@ impl DataCompatibilityTestRunner {
                     content.push_str(&format!("  - {}\n", error));
                 }
             }
-            content.push_str("\n");
+            content.push('\n');
         }
 
         // 数据完整性测试结果
@@ -553,7 +552,7 @@ impl DataCompatibilityTestRunner {
                 };
                 content.push_str(&format!("- {}: {}\n", table_name, status));
             }
-            content.push_str("\n");
+            content.push('\n');
         }
 
         // 错误和警告
@@ -562,7 +561,7 @@ impl DataCompatibilityTestRunner {
             for error in &result.errors {
                 content.push_str(&format!("- {}\n", error));
             }
-            content.push_str("\n");
+            content.push('\n');
         }
 
         if !result.warnings.is_empty() {
@@ -570,7 +569,7 @@ impl DataCompatibilityTestRunner {
             for warning in &result.warnings {
                 content.push_str(&format!("- {}\n", warning));
             }
-            content.push_str("\n");
+            content.push('\n');
         }
 
         std::fs::write(report_path, content)?;

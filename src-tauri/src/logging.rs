@@ -15,13 +15,11 @@
 //! ```rust
 //! use crate::logging::{init_development, init_production};
 //!
-//! fn main() {
-//!     // 开发环境
-//!     init_development().expect("日志初始化失败");
-//!     
-//!     // 生产环境
-//!     // init_production().expect("日志初始化失败");
-//! }
+//! // 开发环境
+//! init_development().expect("日志初始化失败");
+//!
+//! // 生产环境
+//! // init_production().expect("日志初始化失败");
 //! ```
 
 use tracing::Level;
