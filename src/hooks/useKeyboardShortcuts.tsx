@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 export interface Shortcut {
   /**
@@ -60,7 +60,6 @@ export interface UseKeyboardShortcutsOptions {
  */
 export const useKeyboardShortcuts = (options: UseKeyboardShortcutsOptions) => {
   const navigate = useNavigate();
-  const location = useLocation();
 
   // 默认应用快捷键
   const defaultShortcuts: Shortcut[] = [
