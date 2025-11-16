@@ -698,6 +698,9 @@ impl DataIntegrityValidator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use migration_ai_manager_lib::DatabaseConfig;
+    use std::time::Duration;
+    use tempfile::tempdir;
 
     #[tokio::test]
     async fn test_integrity_validator_creation() {
