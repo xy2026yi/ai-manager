@@ -322,10 +322,7 @@ impl DataMigrator {
         "#;
 
         let rows = sqlx::query(query).fetch_all(python_pool).await?;
-        let mut stats = MigrationStats {
-            total_records: rows.len() as i64,
-            ..Default::default()
-        };
+        let mut stats = MigrationStats { total_records: rows.len() as i64, ..Default::default() };
 
         for row in rows {
             let provider = CreateClaudeProviderRequest {
@@ -367,10 +364,7 @@ impl DataMigrator {
         "#;
 
         let rows = sqlx::query(query).fetch_all(python_pool).await?;
-        let mut stats = MigrationStats {
-            total_records: rows.len() as i64,
-            ..Default::default()
-        };
+        let mut stats = MigrationStats { total_records: rows.len() as i64, ..Default::default() };
 
         for row in rows {
             let provider = CreateCodexProviderRequest {
@@ -407,10 +401,7 @@ impl DataMigrator {
         "#;
 
         let rows = sqlx::query(query).fetch_all(python_pool).await?;
-        let mut stats = MigrationStats {
-            total_records: rows.len() as i64,
-            ..Default::default()
-        };
+        let mut stats = MigrationStats { total_records: rows.len() as i64, ..Default::default() };
 
         for row in rows {
             let guide = CreateAgentGuideRequest {
@@ -446,10 +437,7 @@ impl DataMigrator {
         "#;
 
         let rows = sqlx::query(query).fetch_all(python_pool).await?;
-        let mut stats = MigrationStats {
-            total_records: rows.len() as i64,
-            ..Default::default()
-        };
+        let mut stats = MigrationStats { total_records: rows.len() as i64, ..Default::default() };
 
         for row in rows {
             // 解析 args（假设存储为 JSON 字符串）
@@ -497,10 +485,7 @@ impl DataMigrator {
         "#;
 
         let rows = sqlx::query(query).fetch_all(python_pool).await?;
-        let mut stats = MigrationStats {
-            total_records: rows.len() as i64,
-            ..Default::default()
-        };
+        let mut stats = MigrationStats { total_records: rows.len() as i64, ..Default::default() };
 
         for row in rows {
             let config = CreateCommonConfigRequest {

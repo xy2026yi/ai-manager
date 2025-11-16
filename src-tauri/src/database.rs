@@ -100,10 +100,7 @@ impl DatabaseManager {
                 });
 
             // 创建连接池
-            pool_options
-                .connect(&config.url)
-                .await
-                .map_err(DatabaseError::Connection)
+            pool_options.connect(&config.url).await.map_err(DatabaseError::Connection)
         };
 
         // 等待连接池建立
