@@ -61,7 +61,7 @@ impl ApiServer {
     pub async fn with_config(config: ApiServerConfig) -> Result<Self, Box<dyn std::error::Error>> {
         // 初始化数据库和加密服务
         let db_config = crate::database::DatabaseConfig {
-            url: "sqlite:ai_manager.db".to_string(),
+            url: "sqlite:data/ai_manager.db".to_string(),
             max_connections: 10,
             min_connections: 1,
             connect_timeout: std::time::Duration::from_secs(30),

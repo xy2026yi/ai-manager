@@ -53,7 +53,7 @@ pub struct DatabaseConfig {
 impl Default for DatabaseConfig {
     fn default() -> Self {
         Self {
-            url: "sqlite:ai_manager.db".to_string(),
+            url: "sqlite:data/ai_manager.db".to_string(),
             max_connections: 10,
             min_connections: 1,
             connect_timeout: 30,
