@@ -146,7 +146,7 @@ impl DataCompatibilityValidator {
 
     /// 从文件加载Python测试数据
     async fn load_test_data() -> Result<PythonDatabaseData, DataCompatibilityError> {
-        let test_data_path = "tests/data/python_original_sample.json";
+        let test_data_path = "tests/unit/data/python_original_sample.json";
         let content = fs::read_to_string(test_data_path)
             .map_err(|e| DataCompatibilityError::FileSystem(format!("读取测试数据文件失败: {}", e)))?;
 
@@ -408,7 +408,7 @@ impl DataCompatibilityValidator {
         println!("🔐 验证加密数据兼容性...");
 
         // 加载Python加密的测试数据
-        let encrypted_data_path = "tests/data/python_encrypted_sample.json";
+        let encrypted_data_path = "tests/unit/data/python_encrypted_sample.json";
         let content = fs::read_to_string(encrypted_data_path)
             .map_err(|e| DataCompatibilityError::FileSystem(format!("读取加密测试数据失败: {}", e)))?;
 

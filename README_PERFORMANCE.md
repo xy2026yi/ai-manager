@@ -47,7 +47,7 @@
 
 ### 2. 前端性能测试
 
-**位置**: `tests/performance/`
+**位置**: `tests/e2e/performance/`
 
 使用Puppeteer进行浏览器端性能测试：
 
@@ -99,13 +99,13 @@ cargo bench -- --output-format html
 npm install puppeteer
 
 # 运行启动性能测试
-node tests/performance/startup.test.js
+node tests/e2e/performance/startup.test.js
 
 # 运行内存使用测试
-node tests/performance/memory.test.js
+node tests/e2e/performance/memory.test.js
 
 # 运行API性能测试
-node tests/performance/api_response.test.js
+node tests/e2e/performance/api_response.test.js
 ```
 
 ### 运行完整性能测试套件
@@ -309,7 +309,7 @@ jobs:
 2. **单独运行测试**
    ```bash
    # 只运行启动测试
-   node tests/performance/startup.test.js
+   node tests/e2e/performance/startup.test.js
    ```
 
 3. **检查测试环境**

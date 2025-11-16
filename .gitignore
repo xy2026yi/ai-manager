@@ -89,6 +89,7 @@ ai_manager.db
 archived_data/
 backup/
 *.bak
+temp/
 
 # Frontend
 # dist/

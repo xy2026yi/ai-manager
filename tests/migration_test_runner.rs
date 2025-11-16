@@ -60,7 +60,7 @@ impl MigrationTestRunner {
     /// 使用默认配置创建测试运行器
     pub fn with_defaults() -> Self {
         Self {
-            test_database_url: "sqlite:tests/data/test_migration.db".to_string(),
+            test_database_url: "sqlite:tests/unit/data/test_migration.db".to_string(),
             encryption_key: generate_test_key(),
             python_project_path: "/Git/project/ai-manager".to_string(),
             rust_project_path: "/Git/project/migration_ai_manager".to_string(),
@@ -155,7 +155,7 @@ impl MigrationTestRunner {
     /// 创建测试数据库
     async fn create_test_database(&self) -> Result<(), MigrationTestError> {
         // 删除现有测试数据库（如果存在）
-        let test_db_path = "tests/data/test_migration.db";
+        let test_db_path = "tests/unit/data/test_migration.db";
         if Path::new(test_db_path).exists() {
             std::fs::remove_file(test_db_path)
                 .map_err(|e| MigrationTestError::FileSystem(format!("删除测试数据库失败: {}", e)))?;
@@ -188,7 +188,7 @@ impl MigrationTestRunner {
         println!("📝 准备测试数据...");
 
         // 运行Python测试数据生成脚本
-        let python_script = format!("{}/tests/data/migration_validator.py", self.python_project_path);
+        let python_script = format!("{}/tests/unit/data/migration_validator.py", self.python_project_path);
         let output = Command::new("python3")
             .arg(&python_script)
             .current_dir(format!("{}/tests/data", self.python_project_path))
@@ -377,7 +377,7 @@ impl MigrationTestRunner {
         println!("📤 测试Rust到Python数据迁移...");
 
         // 1. 从Rust数据库导出数据
-        let export_file = "tests/data/rust_export.json";
+        let export_file = "tests/unit/data/rust_export.json";
         let output = Command::new("cargo")
             .args(&["run", "--bin", "migration_tool"])
             .args(&["--", "export", &self.test_database_url, export_file])

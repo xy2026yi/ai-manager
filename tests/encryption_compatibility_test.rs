@@ -74,7 +74,7 @@ impl EncryptionCompatibilityValidator {
 
     /// 加载Python加密的测试数据
     pub async fn load_python_encrypted_data(&mut self) -> Result<(), EncryptionCompatibilityError> {
-        let test_data_path = "tests/data/python_encrypted_tokens.json";
+        let test_data_path = "tests/unit/data/python_encrypted_tokens.json";
         
         // 如果Python加密数据不存在，生成它
         if !std::path::Path::new(test_data_path).exists() {
@@ -153,7 +153,7 @@ except Exception as e:
 "#;
 
         // 创建临时Python脚本文件
-        let script_path = "tests/data/temp_encrypt.py";
+        let script_path = "tests/unit/data/temp_encrypt.py";
         std::fs::write(script_path, python_script)
             .map_err(|e| EncryptionCompatibilityError::FileSystem(format!("创建Python脚本失败: {}", e)))?;
 
@@ -213,7 +213,7 @@ except Exception as e:
 "#;
 
         // 创建临时Python脚本文件
-        let script_path = "tests/data/temp_decrypt.py";
+        let script_path = "tests/unit/data/temp_decrypt.py";
         std::fs::write(script_path, python_script)
             .map_err(|e| EncryptionCompatibilityError::FileSystem(format!("创建Python脚本失败: {}", e)))?;
 

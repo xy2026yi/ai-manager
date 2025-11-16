@@ -63,7 +63,7 @@ async fn test_full_migration_roundtrip() {
     let setup = TestSetup::new().await.expect("测试设置失败");
 
     // 1. 加载测试数据
-    let test_data_path = Path::new("tests/data/python_original_sample.json");
+    let test_data_path = Path::new("tests/unit/data/python_original_sample.json");
     if !test_data_path.exists() {
         // 如果测试数据文件不存在，创建一个简化的测试数据
         create_test_sample_file(&setup.temp_dir).await;

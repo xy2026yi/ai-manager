@@ -3,9 +3,9 @@
 // 性能测试运行器
 // 统一运行所有性能测试并生成综合报告
 
-const { runStartupPerformanceTests } = require('../tests/performance/startup.test.js');
-const { runMemoryUsageTests } = require('../tests/performance/memory.test.js');
-const { runApiPerformanceTests } = require('../tests/performance/api_response.test.js');
+const { runStartupPerformanceTests } = require('../tests/e2e/performance/startup.test.js');
+const { runMemoryUsageTests } = require('../tests/e2e/performance/memory.test.js');
+const { runApiPerformanceTests } = require('../tests/e2e/performance/api_response.test.js');
 const fs = require('fs');
 const path = require('path');
 

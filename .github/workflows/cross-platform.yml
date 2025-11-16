@@ -161,7 +161,7 @@ jobs:
         echo "测试路径: $TEST_PATH"
         
         # 运行路径处理测试（如果存在）
-        if [ -d "tests/cross-platform" ]; then
+        if [ -d "tests/integration/cross-platform" ]; then
           cargo test --test cross_platform_paths --release || true
         fi
 
@@ -206,8 +206,8 @@ jobs:
         echo "测试数据库兼容性..."
         
         # 创建测试数据库
-        if [ -f "tests/data/test_migration.db" ]; then
-          cp tests/data/test_migration.db test_cross_platform.db
+        if [ -f "tests/unit/data/test_migration.db" ]; then
+          cp tests/unit/data/test_migration.db test_cross_platform.db
           echo "测试数据库复制成功"
         else
           echo "创建新的测试数据库"
