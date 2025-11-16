@@ -2,9 +2,7 @@
 // 验证从原Python项目迁移数据的完整性和格式一致性
 
 use chrono::Utc;
-use migration_ai_manager_lib::{
-    crypto::CryptoService,
-};
+use migration_ai_manager_lib::crypto::CryptoService;
 use sqlx::{Row, SqlitePool};
 use std::collections::HashMap;
 

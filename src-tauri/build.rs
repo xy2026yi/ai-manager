@@ -1,4 +1,4 @@
 // Tauri 2.x build script
 fn main() {
-    tauri_build::build()
+    tauri_build::build();
 }
