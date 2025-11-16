@@ -6,7 +6,7 @@ __pycache__/
 .Python
 build/
 develop-eggs/
-dist/
+# dist/
 downloads/
 eggs/
 .eggs/
@@ -67,7 +67,7 @@ Cargo.lock
 # Tauri
 src-tauri/target/
 src-tauri/Cargo.lock
-src-tauri/icons/
+# src-tauri/icons/
 src-tauri/build/
 
 # 测试
@@ -91,7 +91,7 @@ backup/
 *.bak
 
 # Frontend
-dist/
+# dist/
 build/
 .env.local
 .env.development.local
