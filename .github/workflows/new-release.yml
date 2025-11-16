@@ -40,20 +40,24 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        # 防止 Windows 上的路径问题
+        clean: true
+        fetch-depth: 0
 
-    - name: 清理 Windows 文件系统标记
+    - name: 配置 Git 设置 (Windows)
       if: matrix.platform == 'windows-latest'
       shell: powershell
       run: |
-        # 移除下载文件时的 Zone.Identifier 标记
-        Get-ChildItem -Recurse -File | Where-Object { $_.Name -like "*:Zone.Identifier" } | Remove-Item -Force
-        # 清理 git 索引中的问题文件
+        # 配置 git 以处理 Windows 路径
         git config core.autocrlf false
         git config core.filemode false
         git config core.eol lf
-        git rm -r --cached . 2>$null || echo "No cached files to remove"
-        git add .
-        Write-Host "Windows filesystem markers cleaned"
+        git config core.protectntfs false
+
+        # 清理可能的 Zone.Identifier 文件
+        Get-ChildItem -Recurse -File -Hidden | Where-Object { $_.Name -like "*:Zone.Identifier" } | Remove-Item -Force -ErrorAction SilentlyContinue
+        Write-Host "Git configuration and cleanup completed"
 
     - name: 缓存 Rust 依赖
       uses: actions/cache@v4
@@ -144,6 +148,7 @@ jobs:
           librsvg2-dev
 
     - name: 创建兼容性软链接和修复环境
+      if: matrix.target == 'x86_64-unknown-linux-gnu'
       run: |
         # 为新版本 Ubuntu 创建 libwebkit2gtk-4.0 兼容链接
         sudo ln -sf /usr/lib/x86_64-linux-gnu/libwebkit2gtk-4.1.so.0 /usr/lib/x86_64-linux-gnu/libwebkit2gtk-4.0.so.0
@@ -196,7 +201,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tauriScript: cargo tauri
-        args: build --target ${{ matrix.target }}
+        args: --target ${{ matrix.target }}
         includeDebug: false
         includeRelease: true
 
