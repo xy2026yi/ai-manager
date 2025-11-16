@@ -44,6 +44,23 @@ jobs:
         # 防止 Windows 上的路径问题
         clean: true
         fetch-depth: 0
+        # 跳过 LFS 和可能的问题文件
+        lfs: false
+        # 设置持久化凭据以避免权限问题
+        persist-credentials: false
+
+    - name: 预清理 Windows 环境
+      if: matrix.platform == 'windows-latest'
+      shell: powershell
+      run: |
+        # 配置 Git 全局设置以处理路径问题
+        git config --global core.autocrlf false
+        git config --global core.filemode false
+        git config --global core.eol lf
+        git config --global core.protectntfs false
+        git config --global core.precomposeunicode false
+
+        Write-Host "Windows environment pre-cleanup completed"
 
     - name: 配置 Git 设置 (Windows)
       if: matrix.platform == 'windows-latest'
@@ -54,9 +71,16 @@ jobs:
         git config core.filemode false
         git config core.eol lf
         git config core.protectntfs false
+        git config core.precomposeunicode false
 
-        # 清理可能的 Zone.Identifier 文件
+        # 清理工作目录中的 Zone.Identifier 文件
         Get-ChildItem -Recurse -File -Hidden | Where-Object { $_.Name -like "*:Zone.Identifier" } | Remove-Item -Force -ErrorAction SilentlyContinue
+        Get-ChildItem -Recurse -File | Where-Object { $_.Name -like "*:Zone.Identifier" } | Remove-Item -Force -ErrorAction SilentlyContinue
+
+        # 重置 git 索引
+        git rm -r --cached . 2>$null || echo "No cached files to remove"
+        git add .
+
         Write-Host "Git configuration and cleanup completed"
 
     - name: 缓存 Rust 依赖
@@ -167,6 +191,36 @@ jobs:
       run: |
         # 确保 Xcode 命令行工具已安装
         xcode-select --install || true
+
+    - name: 生成 macOS 应用图标
+      if: matrix.platform == 'macos-latest'
+      run: |
+        # 为 macOS 创建必要的图标
+        mkdir -p src-tauri/icons/macos
+
+        # 如果已有 PNG 图标，尝试创建 ICNS 文件
+        if [ -f "src-tauri/icons/icon.png" ]; then
+          # 使用 sips 创建图标（如果可用）
+          if command -v sips >/dev/null 2>&1; then
+            # 创建不同尺寸的图标
+            sips -z 16 16 src-tauri/icons/icon.png --out src-tauri/icons/macos/icon_16x16.png
+            sips -z 32 32 src-tauri/icons/icon.png --out src-tauri/icons/macos/icon_32x32.png
+            sips -z 64 64 src-tauri/icons/icon.png --out src-tauri/icons/macos/icon_64x64.png
+            sips -z 128 128 src-tauri/icons/icon.png --out src-tauri/icons/macos/icon_128x128.png
+            sips -z 256 256 src-tauri/icons/icon.png --out src-tauri/icons/macos/icon_256x256.png
+            sips -z 512 512 src-tauri/icons/icon.png --out src-tauri/icons/macos/icon_512x512.png
+
+            # 创建2x版本
+            sips -z 32 32 src-tauri/icons/icon.png --out src-tauri/icons/macos/icon_16x16@2x.png
+            sips -z 64 64 src-tauri/icons/icon.png --out src-tauri/icons/macos/icon_32x32@2x.png
+            sips -z 128 128 src-tauri/icons/icon.png --out src-tauri/icons/macos/icon_64x64@2x.png
+            sips -z 256 256 src-tauri/icons/icon.png --out src-tauri/icons/macos/icon_128x128@2x.png
+            sips -z 512 512 src-tauri/icons/icon.png --out src-tauri/icons/macos/icon_256x256@2x.png
+            sips -z 1024 1024 src-tauri/icons/icon.png --out src-tauri/icons/macos/icon_512x512@2x.png
+          fi
+        fi
+
+        echo "macOS icon generation completed"
 
     - name: 安装 Windows 依赖 (Tauri 2.x)
       if: matrix.platform == 'windows-latest'
