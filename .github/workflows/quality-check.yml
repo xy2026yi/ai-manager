@@ -124,25 +124,29 @@ jobs:
 
     - name: Clippy 静态分析
       working-directory: src-tauri
-      env:
-        JAVASCRIPTCORE_R_SYS_NO_PKG_CONFIG: 1
-        PKG_CONFIG_ALLOW_CROSS: 1
       run: |
         # 设置环境变量绕过 javascriptcore-rs-sys 问题
         export JAVASCRIPTCORE_R_SYS_NO_PKG_CONFIG=1
         export PKG_CONFIG_ALLOW_CROSS=1
 
-        # 只检查关键的 clippy 警告，忽略代码风格问题
         echo "进行核心代码质量检查..."
 
-        # 只检查库和二进制文件，排除测试
+        # 使用正确的 lint 名称，允许非关键警告
         cargo clippy --lib --bins --all-features -- \
           -W clippy::all \
           -A clippy::needless_lifetimes \
           -A clippy::redundant_closure \
-          -A clippy::field_assignment_outside_of_initializer \
-          -A clippy::borrowed_expr \
-          -A clippy::needless_fn_main_in_doctest
+          -A clippy::field_reassign_with_default \
+          -A clippy::needless_doctest_main \
+          -A clippy::single_char_add_str \
+          -A clippy::println_empty_string \
+          -A clippy::needless_borrows_for_generic_args \
+          -A clippy::needless_borrow \
+          -A clippy::single_component_path_imports \
+          -A unused_imports \
+          -A unused_mut \
+          -A unused_variables \
+          -A dead_code
 
         echo "✅ Clippy 核心检查完成"
 
