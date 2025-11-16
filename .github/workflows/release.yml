@@ -176,6 +176,20 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: 清理 Windows 文件系统标记
+      if: matrix.platform == 'windows-latest'
+      shell: powershell
+      run: |
+        # 移除下载文件时的 Zone.Identifier 标记
+        Get-ChildItem -Recurse -File | Where-Object { $_.Name -like "*:Zone.Identifier" } | Remove-Item -Force
+        # 清理 git 索引中的问题文件
+        git config core.autocrlf false
+        git config core.filemode false
+        git config core.eol lf
+        git rm -r --cached . 2>$null || echo "No cached files to remove"
+        git add .
+        Write-Host "Windows filesystem markers cleaned"
+
     - name: 缓存 Rust 依赖
       uses: actions/cache@v4
       with:
@@ -205,9 +219,8 @@ jobs:
         targets: ${{ matrix.target }}
 
     - name: 安装 Tauri CLI 2.x
-      uses: taiki-e/install-action@v2
-      with:
-        tool: cargo-tauri@2.0
+      run: |
+        cargo install tauri-cli --version "^2.0" --locked
 
     - name: 安装 Node.js
       uses: actions/setup-node@v4
@@ -288,6 +301,13 @@ jobs:
     - name: 安装 Windows 依赖 (Tauri 2.x)
       if: matrix.platform == 'windows-latest'
       run: |
+        # 清理 Windows Zone.Identifier 标记
+        git config core.autocrlf false
+        git config core.filemode false
+        git config core.eol lf
+        # 移除可能存在的 Zone.Identifier 文件
+        find . -name "*:Zone.Identifier" -delete 2>nul || echo "No Zone.Identifier files found"
+
         # Windows 环境通常不需要额外依赖，Tauri 2.x 会处理大部分工作
         echo "Windows Tauri 2.x 环境准备完成"
 
